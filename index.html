@@ -1,71 +1,89 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#123657">
-  <meta name="description" content="YellowfinOS — an experimental hobby operating system built from scratch.">
-  <title>YellowfinOS — a little different</title>
-  <style>
-    :root{color-scheme:dark;--text:#f3f8ff;--muted:#c3d8e9;--line:#d8efff55;--glass:#102d49bb;--cyan:#9cddff}
-    *{box-sizing:border-box}html{scroll-behavior:smooth}
-    body{margin:0;color:var(--text);font:16px/1.65 "Segoe UI",Tahoma,Arial,sans-serif;background:radial-gradient(ellipse at 15% 10%,#398cba 0,transparent 38%),radial-gradient(ellipse at 90% 35%,#15527e 0,transparent 42%),linear-gradient(145deg,#173e61,#0b233b 55%,#061321);background-attachment:fixed}
-    a{color:#b6e6ff}a:hover{color:white}
-    .nav{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:18px;padding:12px max(20px,calc((100% - 1080px)/2));background:#061727c9;border-bottom:1px solid var(--line);backdrop-filter:blur(18px)}
-    .brand{display:flex;align-items:center;gap:10px;color:white;text-decoration:none;font-weight:700}.fish{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,#b8edff,#1685c7);font-size:22px;box-shadow:inset 0 1px #fff,0 5px 18px #0005}
-    nav{display:flex;flex-wrap:wrap;gap:18px}nav a{font-size:14px;text-decoration:none;color:#e2f2ff}
-    main{width:min(1080px,calc(100% - 36px));margin:auto}.hero{min-height:570px;display:flex;flex-direction:column;justify-content:center;padding:75px 0}
-    .eyebrow{color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
-    h1{font-size:clamp(46px,8vw,82px);line-height:.98;letter-spacing:-.055em;margin:14px 0;text-shadow:0 5px 24px #0008}h1 span{color:var(--cyan)}
-    .intro{max-width:680px;font-size:clamp(17px,2.2vw,20px);color:#d9eafa}
-    .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 18px;min-height:45px;border-radius:9px;text-decoration:none;font-weight:700;color:#06213a;background:linear-gradient(#effaff,#8bd8ff 55%,#4ba9e4);border:1px solid #d8f4ff;box-shadow:inset 0 1px white,0 5px 18px #0005}
-    .btn.alt{color:#f2f9ff;background:linear-gradient(#ffffff24,#ffffff0b);border-color:#c5e7ff77}.btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
-    .glass{background:linear-gradient(135deg,#ffffff20,#ffffff08);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 55px #0004,inset 0 1px #ffffff26;backdrop-filter:blur(16px)}
-    .warning{max-width:750px;margin-top:32px;padding:16px 19px;color:#e5f2ff;font-size:14px}.warning strong{color:#ffe2a6}
-    section{padding:42px 0}.heading{margin-bottom:22px}h2{font-size:clamp(28px,4vw,38px);letter-spacing:-.03em;margin:0 0 6px}.muted,.heading p{color:var(--muted);margin:0}
-    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}.tile{padding:21px;min-height:165px}.ico{font-size:25px}h3{margin:8px 0 4px;font-size:19px}.tile p{margin:0;color:var(--muted);font-size:14px}
-    .about{padding:23px}.download{display:grid;grid-template-columns:1.35fr .8fr;gap:20px;align-items:center;padding:25px}.tag{display:inline-block;padding:4px 10px;border:1px solid #8bd5ff88;border-radius:99px;color:#bfeaff;font-size:12px;font-weight:700}
-    .side{padding:17px;background:#06172766;border:1px solid #ffffff20;border-radius:12px;color:#ccdeed;font-size:13px}
-    footer{margin-top:50px;padding:27px 15px 35px;text-align:center;border-top:1px solid var(--line);color:#abc2d5;font-size:13px}
-    @media(max-width:740px){.nav{align-items:flex-start;flex-direction:column}nav{gap:13px}.hero{min-height:510px;padding:60px 0}.grid{grid-template-columns:1fr}.download{grid-template-columns:1fr}}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#123b60">
+<meta name="description" content="YellowfinOS is a from-scratch experimental hobby operating system for i686, built around the Corn Kernel.">
+<title>YellowfinOS — a little different. a little fishy.</title>
+<style>
+:root{color-scheme:dark;--ink:#f4f9ff;--muted:#c4d8e9;--soft:#91b8d4;--line:#d9efff42;--cyan:#a9e3ff}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:90px}
+body{margin:0;min-height:100vh;color:var(--ink);font:16px/1.65 "Segoe UI",Tahoma,Arial,sans-serif;background:radial-gradient(ellipse at 12% 5%,#58b8e477 0,transparent 34rem),radial-gradient(ellipse at 88% 30%,#17699a88 0,transparent 38rem),radial-gradient(ellipse at 45% 95%,#123e65 0,transparent 42rem),linear-gradient(145deg,#17486c,#0a2944 54%,#061523);background-attachment:fixed}
+a{color:var(--cyan)}a:hover{color:#fff}a:focus-visible{outline:3px solid white;outline-offset:4px}
+.wrap{width:min(1100px,calc(100% - 40px));margin:auto}
+.topbar{position:sticky;top:0;z-index:10;background:#06192bd9;border-bottom:1px solid var(--line);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.nav{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:22px}
+.brand{display:inline-flex;align-items:center;gap:11px;color:white;text-decoration:none;font-weight:750;letter-spacing:-.02em}
+.fish{width:39px;height:39px;display:grid;place-items:center;border-radius:12px;font-size:23px;background:linear-gradient(145deg,#d8f7ff,#42a9e6 65%,#1767a2);box-shadow:inset 0 1px 2px white,0 5px 18px #0005}
+nav{display:flex;flex-wrap:wrap;gap:22px}nav a{color:#e1f2ff;text-decoration:none;font-size:14px}
+.hero{min-height:610px;display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:34px;padding-block:76px}
+.eyebrow{color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:.19em;text-transform:uppercase}
+h1{margin:13px 0 18px;font-size:clamp(48px,7.4vw,86px);line-height:.98;letter-spacing:-.065em;text-shadow:0 5px 24px #0008}h1 span{color:var(--cyan)}
+.lead{max-width:650px;color:#e0effb;font-size:clamp(17px,2vw,20px)}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:25px}
+.button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:10px 18px;border:1px solid #d9f3ff;border-radius:9px;color:#06213a;font-weight:750;text-decoration:none;background:linear-gradient(#f4fcff,#9cddfa 55%,#54aee5);box-shadow:inset 0 1px white,0 6px 20px #0005;transition:transform .15s,filter .15s}
+.button.secondary{color:#f4faff;background:linear-gradient(#ffffff24,#ffffff0b);border-color:#c5e7ff77}.button:hover{color:inherit;filter:brightness(1.1);transform:translateY(-2px)}
+.glass{background:linear-gradient(135deg,#ffffff20,#ffffff08);border:1px solid var(--line);border-radius:17px;box-shadow:0 18px 55px #0004,inset 0 1px #ffffff2b;backdrop-filter:blur(17px);-webkit-backdrop-filter:blur(17px)}
+.vm-window{overflow:hidden;transform:perspective(1000px) rotateY(-4deg) rotateX(2deg)}
+.windowbar{display:flex;align-items:center;gap:8px;padding:11px 14px;background:#071d30a8;border-bottom:1px solid var(--line)}
+.dot{width:9px;height:9px;border-radius:50%;background:#b5e7ff;box-shadow:0 0 9px #9bdcff88}.windowtitle{margin-left:5px;color:#d9edfb;font-size:12px}
+.screen{min-height:270px;padding:22px;background:radial-gradient(ellipse at 70% 15%,#257db055,transparent 55%),#071a2b;font:13px/1.8 Consolas,"Courier New",monospace;color:#c7eaff}
+.prompt{color:#8de0b0}.dim{color:#789bb7}.bigfish{font:54px/1 "Segoe UI Emoji",sans-serif;text-align:center;margin:18px 0;filter:drop-shadow(0 6px 12px #0008)}
+.desktop-label{text-align:center;color:#e4f5ff;font:15px "Segoe UI",sans-serif}.taskbar{margin:24px -22px -22px;padding:9px 14px;background:#b4e8ff20;border-top:1px solid #d8f2ff3d;color:#e9f8ff;font:11px "Segoe UI",sans-serif}
+.notice{margin-top:25px;padding:15px 18px;color:#e3f1fc;font-size:14px}.notice strong{color:#ffe1a6}
+section{padding-block:47px}.section-head{margin-bottom:23px}h2{margin:0 0 5px;font-size:clamp(29px,4vw,39px);line-height:1.15;letter-spacing:-.04em}
+.section-head p,.muted{margin:0;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.tile{min-height:176px;padding:21px}.icon{font-size:25px}h3{margin:8px 0 5px;font-size:19px}.tile p{margin:0;color:var(--muted);font-size:14px}
+.about{padding:25px}.about p{max-width:850px}
+.specs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:17px}.spec{padding:15px;border-radius:12px;background:#061b2b72;border:1px solid #ffffff1d}.spec b{display:block;color:white;font-size:17px}.spec span{color:var(--soft);font-size:12px}
+.release{display:grid;grid-template-columns:1.3fr .8fr;align-items:center;gap:25px;padding:27px}
+.tag{display:inline-block;padding:4px 10px;border:1px solid #8bd5ff88;border-radius:99px;color:#bfeaff;font-size:12px;font-weight:800;letter-spacing:.04em}
+.checklist{margin:0;padding:17px 20px 17px 37px;border:1px solid #ffffff20;border-radius:12px;background:#06172766;color:#d2e5f3;font-size:13px}.checklist li+li{margin-top:7px}
+footer{margin-top:55px;padding:28px 15px 38px;border-top:1px solid var(--line);text-align:center;color:#abc2d5;font-size:13px}footer a{text-decoration:none}
+@media(max-width:780px){.hero{grid-template-columns:1fr;min-height:auto;padding-block:65px}.vm-window{max-width:570px;transform:none}.grid{grid-template-columns:repeat(2,1fr)}.release{grid-template-columns:1fr}.specs{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:540px){.wrap{width:min(100% - 30px,1100px)}.nav{align-items:flex-start;flex-direction:column;padding-block:11px;gap:9px}nav{gap:13px}nav a{font-size:13px}.hero{padding-block:52px}.grid{grid-template-columns:1fr}.tile{min-height:0}.screen{min-height:240px;padding:17px}.taskbar{margin:24px -17px -17px}.release,.about{padding:20px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition-duration:.01ms!important}}
+</style>
 </head>
 <body>
-<header class="nav">
-  <a class="brand" href="#top"><span class="fish">🐟</span><span>YellowfinOS</span></a>
-  <nav aria-label="Main navigation"><a href="#about">about</a><a href="#features">features</a><a href="#download">downloads</a><a href="https://github.com/KingdomOfFinland/yellowfin-os">source code ↗</a></nav>
-</header>
-<main id="top">
-  <section class="hero">
-    <div class="eyebrow">a hobby operating system</div>
-    <h1>A little different.<br><span>A little fishy.</span></h1>
-    <p class="intro">Meet YellowfinOS: an experimental operating system built from scratch. No Linux distribution underneath. No Windows core. Just a project, a kernel, and a whole lot of code.</p>
-    <div class="actions"><a class="btn" href="https://github.com/KingdomOfFinland/yellowfin-os/releases/latest">↓ get YellowfinOS</a><a class="btn alt" href="https://github.com/KingdomOfFinland/yellowfin-os">view the source ↗</a></div>
-    <div class="warning glass"><strong>⚠ experimental software</strong><br>YellowfinOS is early-stage software. Expect bugs, missing features, lag, and incomplete drivers. It is intended to run in QEMU, VirtualBox, VMware, or the v86 emulator. Real-hardware support is not currently available.</div>
-  </section>
-  <section id="about">
-    <div class="heading"><h2>so, what is YellowfinOS?</h2><p>A from-scratch operating system project — not a Linux, Windows, or BSD-based distribution.</p></div>
-    <div class="glass about"><p class="muted">YellowfinOS is a learning and experimentation project focused on building the pieces of an operating system: boot code, a kernel, system services, storage support, and a graphical environment. It is very much a work in progress, and that's part of the point.</p></div>
-  </section>
-  <section id="features">
-    <div class="heading"><h2>under the surface</h2><p>Some of the areas being built and experimented with.</p></div>
-    <div class="grid">
-      <article class="glass tile"><div class="ico">⚙️</div><h3>Corn Kernel</h3><p>The core of YellowfinOS, developed as a standalone kernel for the i686 architecture.</p></article>
-      <article class="glass tile"><div class="ico">🖥️</div><h3>desktop environment</h3><p>An experimental graphical desktop, with a glassy visual style and plenty still to improve.</p></article>
-      <article class="glass tile"><div class="ico">⌨️</div><h3>Fish shell</h3><p>A built-in command-line environment for interacting with the system and its tools.</p></article>
-      <article class="glass tile"><div class="ico">💾</div><h3>storage experiments</h3><p>Custom filesystem and disk I/O work, still under active development.</p></article>
-      <article class="glass tile"><div class="ico">🧩</div><h3>driver development</h3><p>Hardware support is experimental. Many drivers are incomplete or not available yet.</p></article>
-      <article class="glass tile"><div class="ico">🧪</div><h3>built to experiment</h3><p>New ideas, bugs, fixes, and features — the project will evolve release by release.</p></article>
-    </div>
-  </section>
-  <section id="download">
-    <div class="glass download">
-      <div><span class="tag">VERSION 0.1.0 · EARLY RELEASE</span><h2 style="margin-top:12px">take it for a spin.</h2><p class="muted">Download the latest release assets from GitHub. Check the release notes for build details and known limitations before booting.</p><div class="actions"><a class="btn" href="https://github.com/KingdomOfFinland/yellowfin-os/releases/latest">open downloads ↗</a><a class="btn alt" href="https://copy.sh/v86/">try v86 ↗</a></div></div>
-      <aside class="side"><strong>before you boot</strong><br><br>• Use a virtual machine or browser emulator.<br>• Expect incomplete hardware support.<br>• Back up anything important in your test environment.<br>• Report bugs through the GitHub repository.</aside>
-    </div>
-  </section>
+<header class="topbar"><div class="wrap nav">
+<a class="brand" href="#top"><span class="fish" aria-hidden="true">🐟</span><span>YellowfinOS</span></a>
+<nav aria-label="Main navigation"><a href="#about">about</a><a href="#features">features</a><a href="#specs">system</a><a href="#download">downloads</a><a href="https://github.com/KingdomOfFinland/yellowfin-os">source ↗</a></nav>
+</div></header>
+<main class="wrap" id="top">
+<section class="hero">
+<div>
+<div class="eyebrow">a from-scratch hobby operating system</div>
+<h1>A little different.<br><span>A little fishy.</span></h1>
+<p class="lead">Meet YellowfinOS: an experimental operating system built from the ground up. Its own kernel, its own shell, and a desktop that's starting to take shape. No Linux distribution underneath. Just a fish doing computer things.</p>
+<div class="actions"><a class="button" href="https://github.com/KingdomOfFinland/yellowfin-os/releases/latest">↓ explore releases</a><a class="button secondary" href="https://github.com/KingdomOfFinland/yellowfin-os">view the source ↗</a></div>
+<div class="notice glass"><strong>⚠ experimental software</strong><br>YellowfinOS is early-stage and may contain bugs, missing features, and incomplete drivers. Use a virtual machine or emulator for testing. Do not rely on it for important data.</div>
+</div>
+<div class="glass vm-window" aria-label="Illustrative YellowfinOS desktop preview">
+<div class="windowbar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="windowtitle">YellowfinOS — desktop preview</span></div>
+<div class="screen"><div class="dim">Corn Kernel · i686</div><div class="bigfish" aria-hidden="true">🐟</div><div class="desktop-label">Welcome to YellowfinOS</div><p><span class="prompt">fish@yellowfin ~ $</span> help</p><p class="dim">type a command to get started...</p><div class="taskbar">◈ start &nbsp;&nbsp; desktop &nbsp;&nbsp; terminal <span style="float:right">YF</span></div></div>
+</div>
+</section>
+<section id="about"><div class="section-head"><h2>so, what is YellowfinOS?</h2><p>A small operating system project with a big appetite for learning.</p></div>
+<div class="glass about"><p class="muted">YellowfinOS is a from-scratch operating system project for the i686 architecture. It brings together boot code, the Corn Kernel, storage and device support, a command-line shell, and an experimental graphical desktop. The goal is to learn how the pieces fit together by building them — and improving them one step at a time.</p></div></section>
+<section id="features"><div class="section-head"><h2>under the surface</h2><p>Meet some of the parts that make the fish swim.</p></div>
+<div class="grid">
+<article class="glass tile"><div class="icon">⚙️</div><h3>Corn Kernel</h3><p>The custom C-based kernel at the heart of YellowfinOS, targeting 32-bit i686 systems.</p></article>
+<article class="glass tile"><div class="icon">🖥️</div><h3>graphical desktop</h3><p>An evolving framebuffer-based desktop with windows, a mouse interface, and a glassy visual direction.</p></article>
+<article class="glass tile"><div class="icon">⌨️</div><h3>Fish shell</h3><p>The built-in <code>fsh</code> command-line environment, with system tools and a fish-themed prompt.</p></article>
+<article class="glass tile"><div class="icon">💾</div><h3>FTFS storage</h3><p>A custom filesystem experiment, alongside ATA disk support and virtual-disk testing.</p></article>
+<article class="glass tile"><div class="icon">🧩</div><h3>device support</h3><p>Work in progress across timers, RTC, keyboard, mouse, graphics, and experimental networking.</p></article>
+<article class="glass tile"><div class="icon">🧪</div><h3>built to experiment</h3><p>New ideas, debugging, fixes, and features. The project grows as the system grows.</p></article>
+</div></section>
+<section id="specs"><div class="section-head"><h2>the technical bits</h2><p>A quick look at the current project foundations.</p></div>
+<div class="specs"><div class="spec"><b>i686</b><span>target architecture</span></div><div class="spec"><b>C + NASM</b><span>kernel and low-level code</span></div><div class="spec"><b>Corn Kernel</b><span>custom kernel</span></div><div class="spec"><b>QEMU</b><span>primary test environment</span></div></div></section>
+<section id="download"><div class="glass release"><div>
+<span class="tag">EARLY DEVELOPMENT</span><h2 style="margin-top:12px">take it for a spin.</h2>
+<p class="muted">Find the latest project files and release information on GitHub. Check the release notes for the exact build status, boot instructions, and known limitations.</p>
+<div class="actions"><a class="button" href="https://github.com/KingdomOfFinland/yellowfin-os/releases/latest">open GitHub releases ↗</a><a class="button secondary" href="https://copy.sh/v86/">try the v86 emulator ↗</a></div>
+</div><ul class="checklist"><li>Test in a virtual machine or emulator.</li><li>Expect incomplete hardware support.</li><li>Keep important files outside test disks.</li><li>Check the repository for current build instructions.</li></ul></div></section>
 </main>
-<footer>YellowfinOS · version 0.1.0 · made as a hobby project 🐟<br><a href="https://github.com/KingdomOfFinland/yellowfin-os">GitHub repository</a></footer>
+<footer>YellowfinOS · a hobby operating system project 🐟<br><a href="https://github.com/KingdomOfFinland/yellowfin-os">GitHub repository</a> &nbsp;·&nbsp; not affiliated with tunaOS</footer>
 </body>
 </html>
