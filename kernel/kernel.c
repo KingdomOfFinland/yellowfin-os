@@ -32,6 +32,7 @@ static volatile u16 *const VGA = (volatile u16 *)0xB8000;
 static int cur_x = 0, cur_y = 0;
 static u8 color = 0x07;
 static int con_w = VGA_W, con_h = VGA_H;   /* real console size, set in kernel_main */
+static void (*out_hook)(char);   /* when set, kputc output goes here instead of the screen */
 
 /* Hardware port input */
 static inline u8 inb(u16 port)
@@ -83,7 +84,11 @@ void wm_draw_about(void);
 
 static void kputc(char c)
 {
-    int fb = fbcon_on();
+    int fb;
+
+    if (out_hook) { out_hook(c); return; }
+
+    fb = fbcon_on();
 
     if (fb)
         fbcon_putc(c, color);
@@ -352,7 +357,7 @@ static void fetch(void)
     kputs("              OS: ");
 
     color = 0x07;
-    kputs("Yellowfin OS 0.0.1\n");
+    kputs("Yellowfin OS 0.2\n");
 
     color = 0x0E;
     kputs("              Arch: ");
@@ -422,7 +427,7 @@ static void run(char *cmd)
         }
 
     } else if (streq(cmd, "ver")) {
-        kputs("Yellowfin OS 0.1.0\n");
+        kputs("Yellowfin OS 0.2\n");
         kputs("Codename: Fish\n");
         kputs("Architecture: i686\n");
         kputs("Shell: fsh\n");
@@ -694,6 +699,21 @@ static void run(char *cmd)
     } else {
         kputs("Unknown command. Type 'help'.\n");
     }
+}
+
+void fsh_exec(const char *line, void (*sink)(char))
+{
+    char buf[MAXLEN];
+    int i;
+
+    for (i = 0; i < MAXLEN - 1 && line[i]; i++)
+        buf[i] = line[i];
+    buf[i] = 0;
+
+    out_hook = sink;
+    run(buf);
+    out_hook = 0;
+    color = 0x07;
 }
 
 /* Shell prompt */
