@@ -35,6 +35,23 @@ static u8 disk[FIRST_DATA * BLOCK_SIZE] __attribute__((aligned(4)));
 #define TABLE    ((ftfs_record *)(disk + 1 * BLOCK_SIZE))
 #define MAP      (disk + (1 + TABLE_BLOCKS) * BLOCK_SIZE)
 
+/* which disk the mounted FTFS lives on, and where it starts on that disk */
+static int f_ch = 0, f_sl = 1, f_mounted = 0;
+static u32 f_base = 0;
+
+/* all disk access goes through these so other code can't leave the wrong drive selected */
+static int dread(u32 lba, u32 n, void *buf)
+{
+    ata_select2(f_ch, f_sl);
+    return ata_read(f_base + lba, n, buf);
+}
+
+static int dwrite(u32 lba, u32 n, const void *buf)
+{
+    ata_select2(f_ch, f_sl);
+    return ata_write(f_base + lba, n, buf);
+}
+
 static u32 slen(const char *s)
 {
     u32 n = 0;
@@ -62,7 +79,7 @@ static void zero(u8 *p, u32 n)
 
 static int meta_save(void)
 {
-    return ata_write(0, FIRST_DATA, disk);
+    return dwrite(0, FIRST_DATA, disk);
 }
 
 void ftfs_format(void)
@@ -79,17 +96,92 @@ void ftfs_format(void)
     meta_save();             /* old file data stays on disk but is unreferenced */
 }
 
-/* 0 = no disk, 1 = mounted, 2 = blank disk just formatted */
+/* 1 = FTFS found and mounted there, 0 = nothing (or unreadable) */
+static int mount_at(int ch, int sl, u32 base)
+{
+    f_ch = ch; f_sl = sl; f_base = base;
+    if (dread(0, FIRST_DATA, disk)) return 0;
+    if (SUPER->magic != MAGIC) return 0;
+    f_mounted = 1;
+    return 1;
+}
+
+/* 0 = no disk, 1 = mounted, 2 = blank data disk just formatted
+   Order: the installed layout on the boot disk first, then the separate data disk.
+   A data disk is only auto-formatted if it is completely blank. */
 int ftfs_init(void)
 {
-    ata_select(1);                       /* FTFS lives on the data disk */
+    u8 sec[BLOCK_SIZE];
+    u32 i, nz = 0;
+
+    f_mounted = 0;
+
+    ata_select2(0, 0);
+    if (ata_init() == 0 && mount_at(0, 0, FTFS_INSTALL_BASE))
+        return 1;
+
+    ata_select2(0, 1);                   /* the separate data disk */
     if (ata_init() != 0) return 0;
-    if (ata_read(0, FIRST_DATA, disk)) return 0;
-    if (SUPER->magic != MAGIC) {
-        ftfs_format();
-        return 2;
-    }
+    if (mount_at(0, 1, 0)) return 1;
+
+    f_ch = 0; f_sl = 1; f_base = 0;
+    if (dread(0, 1, sec)) return 0;
+    for (i = 0; i < BLOCK_SIZE; i++) nz |= sec[i];
+    if (nz) return 0;                    /* not blank and not FTFS: leave it alone */
+
+    ftfs_format();
+    f_mounted = 1;
+    return 2;
+}
+
+int ftfs_device(int *channel, int *slave, u32 *base)
+{
+    if (!f_mounted) return 0;
+    *channel = f_ch;
+    *slave = f_sl;
+    *base = f_base;
     return 1;
+}
+
+/* Writes a fresh empty FTFS on another disk, block by block, without touching the mounted copy. */
+int ftfs_format_disk(int ch, int sl, u32 base, void (*cb)(int pct))
+{
+    u8 sec[BLOCK_SIZE] __attribute__((aligned(4)));
+    u32 b, i, total = FIRST_DATA;
+
+    for (b = 0; b < total; b++) {
+        zero(sec, BLOCK_SIZE);
+
+        if (b == 0) {
+            ftfs_super *sb = (ftfs_super *)sec;
+            sb->magic = MAGIC;
+            sb->version = 1;
+            sb->block_size = BLOCK_SIZE;
+            sb->total_blocks = TOTAL_BLOCKS;
+            sb->max_files = MAX_FILES;
+            sb->files_used = 0;
+        } else if (b >= 1 + TABLE_BLOCKS) {
+            u32 m = b - (1 + TABLE_BLOCKS);          /* map block number */
+            for (i = 0; i < BLOCK_SIZE; i++)
+                sec[i] = (m * BLOCK_SIZE + i < FIRST_DATA) ? 1 : 0;
+        }
+
+        ata_select2(ch, sl);
+        if (ata_write(base + b, 1, sec)) return -1;
+
+        if (cb && ((b % 8) == 7 || b == total - 1))
+            cb((int)((b + 1) * 100 / total));
+    }
+    return 0;
+}
+
+int ftfs_probe(int ch, int sl, u32 base)
+{
+    u8 sec[BLOCK_SIZE] __attribute__((aligned(4)));
+
+    ata_select2(ch, sl);
+    if (ata_read(base, 1, sec)) return 0;
+    return ((ftfs_super *)sec)->magic == MAGIC;
 }
 
 static int find(const char *name)
@@ -142,12 +234,12 @@ int ftfs_write(const char *name, const u8 *data, u32 len)
     if (start < 0) return -3;
 
     /* data first, then metadata, so a failure never points at junk */
-    if (full && ata_write((u32)start, full, data)) return -4;
+    if (full && dwrite((u32)start, full, data)) return -4;
     if (rem) {
         u8 tmp[BLOCK_SIZE];
         copy(tmp, data + full * BLOCK_SIZE, rem);
         zero(tmp + rem, BLOCK_SIZE - rem);
-        if (ata_write((u32)start + full, 1, tmp)) return -4;
+        if (dwrite((u32)start + full, 1, tmp)) return -4;
     }
 
     zero((u8 *)&TABLE[slot], sizeof(ftfs_record));
@@ -173,10 +265,10 @@ int ftfs_read(const char *name, u8 *out, u32 max)
     full = n / BLOCK_SIZE;
     rem = n % BLOCK_SIZE;
 
-    if (full && ata_read(first, full, out)) return -4;
+    if (full && dread(first, full, out)) return -4;
     if (rem) {
         u8 tmp[BLOCK_SIZE];
-        if (ata_read(first + full, 1, tmp)) return -4;
+        if (dread(first + full, 1, tmp)) return -4;
         copy(out + full * BLOCK_SIZE, tmp, rem);
     }
     return (int)n;
