@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#123b60">
-<meta name="description" content="YellowfinOS is a from-scratch experimental hobby operating system for i686, built around the Corn Kernel.">
+<meta name="description" content="YellowfinOS 0.2 is a from-scratch experimental i686 hobby operating system, featuring the Corn Kernel, Fish shell, graphical desktop, and new Command Prompt window.">
 <title>YellowfinOS — a little different. a little fishy.</title>
 <style>
 :root{color-scheme:dark;--ink:#f4f9ff;--muted:#c4d8e9;--soft:#91b8d4;--line:#d9efff42;--cyan:#a9e3ff}
@@ -54,9 +54,9 @@ footer{margin-top:55px;padding:28px 15px 38px;border-top:1px solid var(--line);t
 <main class="wrap" id="top">
 <section class="hero">
 <div>
-<div class="eyebrow">a from-scratch hobby operating system</div>
+<div class="eyebrow">yellowfinos 0.2 · latest release</div>
 <h1>A little different.<br><span>A little fishy.</span></h1>
-<p class="lead">Meet YellowfinOS: an experimental operating system built from the ground up. Its own kernel, its own shell, and a desktop that's starting to take shape. No Linux distribution underneath. Just a fish doing computer things.</p>
+<p class="lead">Meet YellowfinOS 0.2: an experimental operating system built from the ground up. Its own kernel, its own shell, and a desktop that keeps growing — now with a built-in Command Prompt window. No Linux distribution underneath. Just a fish doing computer things.</p>
 <div class="actions"><a class="button" href="https://github.com/KingdomOfFinland/yellowfin-os/releases/latest">↓ explore releases</a><a class="button secondary" href="https://github.com/KingdomOfFinland/yellowfin-os">view the source ↗</a></div>
 <div class="notice glass"><strong>⚠ experimental software</strong><br>YellowfinOS is early-stage and may contain bugs, missing features, and incomplete drivers. Use a virtual machine or emulator for testing. Do not rely on it for important data.</div>
 </div>
@@ -66,21 +66,22 @@ footer{margin-top:55px;padding:28px 15px 38px;border-top:1px solid var(--line);t
 </div>
 </section>
 <section id="about"><div class="section-head"><h2>so, what is YellowfinOS?</h2><p>A small operating system project with a big appetite for learning.</p></div>
-<div class="glass about"><p class="muted">YellowfinOS is a from-scratch operating system project for the i686 architecture. It brings together boot code, the Corn Kernel, storage and device support, a command-line shell, and an experimental graphical desktop. The goal is to learn how the pieces fit together by building them — and improving them one step at a time.</p></div></section>
+<div class="glass about"><p class="muted">YellowfinOS 0.2 is a from-scratch operating system project for the i686 architecture. It brings together boot code, the Corn Kernel, storage and device support, the Fish shell, and an experimental graphical desktop. This release adds a Command Prompt window to the desktop, where shell commands can run inside a window. The goal is to learn how the pieces fit together by building them — and improving them one step at a time.</p></div></section>
 <section id="features"><div class="section-head"><h2>under the surface</h2><p>Meet some of the parts that make the fish swim.</p></div>
 <div class="grid">
 <article class="glass tile"><div class="icon">⚙️</div><h3>Corn Kernel</h3><p>The custom C-based kernel at the heart of YellowfinOS, targeting 32-bit i686 systems.</p></article>
 <article class="glass tile"><div class="icon">🖥️</div><h3>graphical desktop</h3><p>An evolving framebuffer-based desktop with windows, a mouse interface, and a glassy visual direction.</p></article>
 <article class="glass tile"><div class="icon">⌨️</div><h3>Fish shell</h3><p>The built-in <code>fsh</code> command-line environment, with system tools and a fish-themed prompt.</p></article>
+<article class="glass tile"><div class="icon">⌨️</div><h3>Command Prompt</h3><p>New in 0.2: a desktop command window that runs Fish shell commands, with its own prompt and output.</p></article>
 <article class="glass tile"><div class="icon">💾</div><h3>FTFS storage</h3><p>A custom filesystem experiment, alongside ATA disk support and virtual-disk testing.</p></article>
 <article class="glass tile"><div class="icon">🧩</div><h3>device support</h3><p>Work in progress across timers, RTC, keyboard, mouse, graphics, and experimental networking.</p></article>
 <article class="glass tile"><div class="icon">🧪</div><h3>built to experiment</h3><p>New ideas, debugging, fixes, and features. The project grows as the system grows.</p></article>
 </div></section>
 <section id="specs"><div class="section-head"><h2>the technical bits</h2><p>A quick look at the current project foundations.</p></div>
-<div class="specs"><div class="spec"><b>i686</b><span>target architecture</span></div><div class="spec"><b>C + NASM</b><span>kernel and low-level code</span></div><div class="spec"><b>Corn Kernel</b><span>custom kernel</span></div><div class="spec"><b>QEMU</b><span>primary test environment</span></div></div></section>
+<div class="specs"><div class="spec"><b>0.2</b><span>latest release</span></div><div class="spec"><b>i686</b><span>target architecture</span></div><div class="spec"><b>C + NASM</b><span>kernel and low-level code</span></div><div class="spec"><b>Corn Kernel</b><span>custom kernel</span></div><div class="spec"><b>QEMU</b><span>primary test environment</span></div></div></section>
 <section id="download"><div class="glass release"><div>
-<span class="tag">EARLY DEVELOPMENT</span><h2 style="margin-top:12px">take it for a spin.</h2>
-<p class="muted">Find the latest project files and release information on GitHub. Check the release notes for the exact build status, boot instructions, and known limitations.</p>
+<span class="tag">YELLOWFINOS 0.2 · RELEASE</span><h2 style="margin-top:12px">take it for a spin.</h2>
+<p class="muted">YellowfinOS 0.2 is here. This release introduces the desktop Command Prompt window, adds shell-output routing for windowed commands, and updates the system version display. Get the release and read its notes on GitHub for build status, boot instructions, and known limitations.</p>
 <div class="actions"><a class="button" href="https://github.com/KingdomOfFinland/yellowfin-os/releases/latest">open GitHub releases ↗</a><a class="button secondary" href="https://copy.sh/v86/">try the v86 emulator ↗</a></div>
 </div><ul class="checklist"><li>Test in a virtual machine or emulator.</li><li>Expect incomplete hardware support.</li><li>Keep important files outside test disks.</li><li>Check the repository for current build instructions.</li></ul></div></section>
 </main>
