@@ -62,22 +62,117 @@ static uint32_t lerp(uint32_t a, uint32_t b, int t, int n)
             (uint32_t)(ab + (bb - ab) * t / n);
 }
 
-/* glossy split body; round: 1 = bottom-left corner, 2 = bottom-right */
+/* ---- rounded corners ---- */
+
+#define WIN_R  8        /* window corner radius */
+#define CAP_RT 3        /* caption button group: top corner radius */
+#define CAP_RB 6        /* caption button group: bottom corner radius */
+
+/* how many pixels row i (0 = outermost row) is pulled in by a corner of radius r */
+static int rinset(int i, int r)
+{
+    int d = 2 * (r - i) - 1;
+    int v = 4 * r * r - d * d;
+    int s = 0;
+
+    while ((s + 1) * (s + 1) <= v)
+        s++;
+    return r - (s + 1) / 2;
+}
+
+static void fill_row(int x, int y, int w, uint32_t c, int a)
+{
+    if (a >= 255) gfx_rect(x, y, w, 1, c);
+    else          gfx_blend_rect(x, y, w, 1, c, a);
+}
+
+/* filled rounded rectangle: rt = top corner radius, rb = bottom corner radius */
+static void rr_fill(int x, int y, int w, int h, int rt, int rb, uint32_t c, int a)
+{
+    int mid = h - rt - rb;
+
+    for (int i = 0; i < rt; i++) {
+        int k = rinset(i, rt);
+        fill_row(x + k, y + i, w - 2 * k, c, a);
+    }
+    if (mid > 0) {
+        if (a >= 255) gfx_rect(x, y + rt, w, mid, c);
+        else          gfx_blend_rect(x, y + rt, w, mid, c, a);
+    }
+    for (int i = 0; i < rb; i++) {
+        int k = rinset(i, rb);
+        fill_row(x + k, y + h - 1 - i, w - 2 * k, c, a);
+    }
+}
+
+/* 1px outline that follows the same rounded shape */
+static void rr_edge(int x, int y, int w, int h, int rt, int rb, uint32_t c)
+{
+    if (rt == 0)
+        gfx_rect(x, y, w, 1, c);
+    for (int i = 0; i < rt; i++) {
+        int k = rinset(i, rt);
+
+        if (i == 0) {
+            gfx_rect(x + k, y, w - 2 * k, 1, c);
+        } else {
+            int run = rinset(i - 1, rt) - k;
+
+            if (run < 1) run = 1;
+            gfx_rect(x + k, y + i, run, 1, c);
+            gfx_rect(x + w - k - run, y + i, run, 1, c);
+        }
+    }
+
+    if (rb == 0)
+        gfx_rect(x, y + h - 1, w, 1, c);
+    for (int i = 0; i < rb; i++) {
+        int k = rinset(i, rb), yy = y + h - 1 - i;
+
+        if (i == 0) {
+            gfx_rect(x + k, yy, w - 2 * k, 1, c);
+        } else {
+            int run = rinset(i - 1, rb) - k;
+
+            if (run < 1) run = 1;
+            gfx_rect(x + k, yy, run, 1, c);
+            gfx_rect(x + w - k - run, yy, run, 1, c);
+        }
+    }
+
+    gfx_rect(x, y + rt, 1, h - rt - rb, c);
+    gfx_rect(x + w - 1, y + rt, 1, h - rt - rb, c);
+}
+
+static void rounded_panel(int x, int y, int w, int h)
+{
+    rr_fill(x + 5, y + 5, w, h, WIN_R, WIN_R, 0x000000, 70);     /* shadow */
+    rr_fill(x, y, w, h, WIN_R, WIN_R, 0xBFD8F0, 120);            /* glass body */
+    rr_edge(x, y, w, h, WIN_R, WIN_R, 0x2A4A70);                 /* dark outer edge */
+    rr_edge(x + 1, y + 1, w - 2, h - 2, WIN_R - 1, WIN_R - 1, 0xDCEBFA);   /* light inner edge */
+}
+
+/* glossy split body; round: 1 = round the left corners, 2 = round the right corners */
 static void cap_body(int x, int y, int w, int h, uint32_t t0, uint32_t t1, int at,
                      uint32_t b0, uint32_t b1, int ab, int round)
 {
     int half = h / 2;
 
     for (int i = 0; i < h; i++) {
-        int top = i < half, fb = h - 1 - i, l = 0, r = 0;
+        int top = i < half, fb = h - 1 - i, k = 0, l, r;
         uint32_t c = top ? lerp(t0, t1, i, half - 1) : lerp(b0, b1, i - half, h - half - 1);
         int a = top ? at : ab;
 
-        if (fb == 0) l = r = 2; else if (fb == 1) l = r = 1;
-        if (!(round & 1)) l = 0;
-        if (!(round & 2)) r = 0;
-        if (a >= 255) gfx_rect(x + l, y + i, w - l - r, 1, c);
-        else          gfx_blend_rect(x + l, y + i, w - l - r, 1, c, a);
+        if (i < CAP_RT)
+            k = rinset(i, CAP_RT);
+        if (fb < CAP_RB) {
+            int kb = rinset(fb, CAP_RB);
+
+            if (kb > k) k = kb;
+        }
+        l = (round & 1) ? k : 0;
+        r = (round & 2) ? k : 0;
+        fill_row(x + l, y + i, w - l - r, c, a);
     }
 }
 
@@ -94,9 +189,10 @@ static void glyph(int kind, int cx, int cy)       /* 0 min, 1 max, 2 close */
             gfx_frame(px - 5, py - 4, 10, 9, c);
             gfx_rect(px - 5, py - 4, 10, 3, c);
         } else {
-            for (int i = 0; i < 9; i++) {
-                gfx_rect(px - 5 + i, py - 4 + i, 2, 2, c);
-                gfx_rect(px + 4 - i, py - 4 + i, 2, 2, c);
+            /* heavier X: two 3px-wide diagonal strokes, 8 rows tall */
+            for (int i = 0; i < 8; i++) {
+                gfx_rect(px - 5 + i, py - 4 + i, 3, 1, c);
+                gfx_rect(px + 2 - i, py - 4 + i, 3, 1, c);
             }
         }
     }
@@ -109,7 +205,8 @@ void glass_caption(int x, int y, int w)
     int mx = bx - GLASS_CAP_W, nx = mx - GLASS_CAP_W;
     int hv = glass_hover_btn, cy = by + ch / 2;
 
-    gfx_blend_rect(nx - 1, by - 1, 2 * GLASS_CAP_W + cw + 2, ch + 2, 0x000000, 120);
+    /* dark rim around the whole group, rounded to match */
+    rr_fill(nx - 1, by - 1, 2 * GLASS_CAP_W + cw + 2, ch + 2, CAP_RT + 1, CAP_RB + 1, 0x000000, 120);
 
     for (int b = 0; b < 2; b++) {
         int hot = (hv == 1 + b);
@@ -137,12 +234,12 @@ void glass_window(int x, int y, int w, int h, const char *title)
     int cx = x + 8, cy = y + GLASS_TITLE_H + 4;
     int cw = w - 16, ch = h - GLASS_TITLE_H - 12;
 
-    glass_panel(x, y, w, h);
+    rounded_panel(x, y, w, h);
 
     /* title bar gloss: brighter top half; inactive windows are flatter and darker */
     if (!foc)
-        gfx_blend_rect(x + 2, y + 2, w - 4, GLASS_TITLE_H - 2, 0x203A5C, 70);
-    gfx_blend_rect(x + 2, y + 2, w - 4, 14, 0xFFFFFF, foc ? 80 : 35);
+        rr_fill(x + 2, y + 2, w - 4, GLASS_TITLE_H - 2, WIN_R - 2, 0, 0x203A5C, 70);
+    rr_fill(x + 2, y + 2, w - 4, 14, WIN_R - 2, 0, 0xFFFFFF, foc ? 80 : 35);
     gfx_blend_rect(x + 2, y + 16, w - 4, GLASS_TITLE_H - 16, 0xFFFFFF, foc ? 35 : 12);
     gfx_text(x + 11, y + 8, title, 0x10243C);
     gfx_text(x + 10, y + 7, title, foc ? 0xFFFFFF : 0xC4D2E2);
