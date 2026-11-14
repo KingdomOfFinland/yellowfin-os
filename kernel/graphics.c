@@ -1,4 +1,5 @@
 #include "graphics.h"
+#include "font_selawik.h"
 
 #define VBE_OK    (*(volatile uint8_t  *)0x8FF0)
 #define VBE_PITCH (*(volatile uint16_t *)0x9010)
@@ -166,7 +167,7 @@ void gfx_blend_rect(int x, int y, int w, int h, uint32_t c, uint32_t alpha)
     }
 }
 
-void gfx_text(int x, int y, const char *s, uint32_t fg)
+void gfx_text_mono(int x, int y, const char *s, uint32_t fg)
 {
     for (; *s; s++, x += 8) {
         const uint8_t *g = FONT + (uint8_t)*s * 16;
@@ -187,6 +188,56 @@ void gfx_text(int x, int y, const char *s, uint32_t fg)
                     back[yy * W + xx] = fg;
             }
         }
+    }
+}
+
+/* ---- Selawik proportional text (antialiased), added next to the old font ---- */
+
+static const struct yf_glyph *glyph(uint8_t c)
+{
+    const struct yf_glyph *g = &yf_glyphs[c];
+
+    return g->adv ? g : &yf_glyphs['?'];       /* unknown bytes show as '?' */
+}
+
+int gfx_text_width(const char *s)
+{
+    int w = 0;
+
+    while (*s)
+        w += glyph((uint8_t)*s++)->adv;
+    return w;
+}
+
+/* y is the top of the line, like gfx_text */
+void gfx_text(int x, int y, const char *s, uint32_t fg)
+{
+    int base = y + YF_FONT_ASCENT;
+
+    for (; *s; s++) {
+        const struct yf_glyph *g = glyph((uint8_t)*s);
+        const uint8_t *bm = yf_bits + g->off;
+        int gx = x + g->xo, gy = base + g->yo;
+
+        for (int j = 0; j < g->h; j++) {
+            int yy = gy + j;
+            uint32_t *row;
+
+            if (yy < 0 || yy >= (int)H)
+                continue;
+            row = back + yy * W;
+
+            for (int i = 0; i < g->w; i++) {
+                int xx = gx + i;
+                uint32_t a = bm[j * g->w + i];
+
+                if (!a || xx < 0 || xx >= (int)W)
+                    continue;
+                row[xx] = (a >= 250) ? (fg & 0xFFFFFF)
+                                     : blend(row[xx], fg, a + (a >> 7));
+            }
+        }
+        x += g->adv;
     }
 }
 
