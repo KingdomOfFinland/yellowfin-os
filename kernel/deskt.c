@@ -7,6 +7,7 @@
 #include "ui.h"
 #include "keys.h"
 #include "calc.h"
+#include "cmd.h"
 #include "assets/icons/cursors/cursor.xpm"
 #include "assets/icons/fishlogo.xpm"
 #include "assets/icons/fishlogoslctd.xpm"
@@ -19,9 +20,9 @@
 #define MENU_W    200
 #define ITEM_H    32
 #define MENU_PAD  4
-#define MENU_N    5
+#define MENU_N    6
 
-enum { WIN_NONE, WIN_ABOUT, WIN_FTFS, WIN_BIN, WIN_CALC };
+enum { WIN_NONE, WIN_ABOUT, WIN_FTFS, WIN_BIN, WIN_CALC, WIN_CMD };
 
 struct dicon { int x, y; const char *label; int win; };
 
@@ -36,7 +37,8 @@ static const char *menu_items[MENU_N] = {
     "FTFS Files",
     "About Yellowfin",
     "Exit to shell",
-    "Calculator"
+    "Calculator",
+	"Command Prompt"
 };
 static uint32_t cur_px[12 * 19], logo_px[64 * 64], logo_sel_px[64 * 64];
 static gfx_image img_cur, img_logo, img_logo_sel;
@@ -89,9 +91,12 @@ static void open_win(int kind)
     else if (kind == WIN_FTFS) t = "FTFS Files";
     else if (kind == WIN_BIN)  t = "Recycle Bin";
     else if (kind == WIN_CALC) t = "Calculator";
+    else if (kind == WIN_CMD)  t = "Command Prompt";
 
     if (kind == WIN_CALC)
         wm_open(kind, t, CALC_W, CALC_H);
+    else if (kind == WIN_CMD)
+        wm_open(kind, t, CMD_W, CMD_H);
     else
         wm_open(kind, t, 420, 240);
 }
@@ -198,6 +203,7 @@ static void draw_windows(void)
         else if (w->kind == WIN_FTFS) draw_ftfs(w->x, w->y, w->h);
         else if (w->kind == WIN_BIN)  draw_bin(w->x, w->y);
         else if (w->kind == WIN_CALC) calc_draw(w->x, w->y);
+        else if (w->kind == WIN_CMD)  cmd_draw(w->x, w->y);
     }
 
     glass_focused = 1;                           /* leave defaults for other glass_window users */
@@ -265,7 +271,7 @@ static void draw_desktop_rect(int fx, int fy, int fw, int fh)
     }
 
     shadow_text(w - 8 * 18 - 16, h - GLASS_TASKBAR_H - 24,
-                "Yellowfin OS 0.0.1", 0xD8E8F8);
+                "YellowFinOS 0.2", 0xD8E8F8);
 
     draw_windows();
 
@@ -332,6 +338,7 @@ static void menu_action(int i)
     else if (i == 2) open_win(WIN_ABOUT);
     else if (i == 3) want_exit = 1;
     else if (i == 4) open_win(WIN_CALC);
+    else if (i == 5) open_win(WIN_CMD);
 }
 
 /* ---- pointer handling ---- */
@@ -442,6 +449,7 @@ void desktop_run(int (*poll_key)(void))
     pk = poll_key;
     wm_init();
     calc_reset();
+    cmd_reset();
     menu_open = 0;
     hover_icon = hover_item = -1;
     hover_orb = 0;
@@ -464,7 +472,7 @@ void desktop_run(int (*poll_key)(void))
         if (mouse_poll())
             pointer_update(mouse_buttons());
 
-        k = poll_key();
+                k = poll_key();
         if (k <= 0)
             continue;
 
@@ -478,6 +486,19 @@ void desktop_run(int (*poll_key)(void))
                 continue;
             }
         }
+
+        /* Focused command prompt gets keys next. */      /* <-- new block starts */
+        {
+            int s = wm_top();
+            struct wm_win *w = (s >= 0) ? wm_get(s) : 0;
+
+            if (w && !w->minimized && w->kind == WIN_CMD) {
+                int r = cmd_key(k);
+
+                if (r == 2) { wm_close(s); redraw(); continue; }
+                if (r)      { redraw(); continue; }
+            }
+        }                                                  /* <-- new block ends */
 
         if (k == 'q' || k == 'Q')
             break;
