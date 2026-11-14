@@ -266,18 +266,18 @@ static void draw_desktop_rect(int fx, int fy, int fw, int fh)
         else
             gfx_blit_scaled(&img_logo, ic->x, ic->y, ICON_SZ, ICON_SZ);
 
-        shadow_text(ic->x + ICON_SZ / 2 - slen(ic->label) * 4, ic->y + 54,
+        shadow_text(ic->x + ICON_SZ / 2 - gfx_text_width(ic->label) / 2, ic->y + 54,
                     ic->label, 0xFFFFFF);
     }
 
-    shadow_text(w - 8 * 18 - 16, h - GLASS_TASKBAR_H - 24,
+    shadow_text(w - gfx_text_width("YellowFinOS 0.2") - 16, h - GLASS_TASKBAR_H - 24,
                 "YellowFinOS 0.2", 0xD8E8F8);
 
     draw_windows();
 
     glass_taskbar();
     draw_tb_buttons();
-    shadow_text(w - 8 * 18 - 16, h - GLASS_TASKBAR_H + 12,
+    shadow_text(w - gfx_text_width("M: Menu   Q: Shell") - 16, h - GLASS_TASKBAR_H + 12,
                 "M: Menu   Q: Shell", 0xD8E8F8);
 
     gfx_blit_scaled(hover_orb ? &img_logo_sel : &img_logo, ORB_X, orb_y(), ORB_SZ, ORB_SZ);
