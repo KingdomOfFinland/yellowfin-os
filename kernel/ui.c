@@ -1,6 +1,7 @@
 #include "ui.h"
 #include "timer.h"
-#include "ata.h"
+#include "install.h"
+#include "payload.h"
 
 #define W 80
 #define H 25
@@ -33,6 +34,9 @@ static int ox, oy;               /* offset that centres 80x25 on a bigger screen
 #define A_WARN   0x74   /* red on gray              */
 #define A_GOOD   0x72   /* green on gray            */
 #define A_SEL    0x1F   /* white on blue            */
+
+#define KEY_UP   0x80
+#define KEY_DOWN 0x81
 
 static volatile uint16_t *const VGA = (volatile uint16_t *)0xB8000;
 
@@ -96,6 +100,29 @@ static void number(int x, int y, int v, uint8_t attr)
     while (n) cell(x++, y, (uint8_t)tmp[--n], attr);
 }
 
+/* "1234 MB" into out */
+static void fmt_mb(char *out, uint32_t mb)
+{
+    char t[11];
+    int n = 0, i = 0;
+
+    if (!mb) t[n++] = '0';
+    while (mb) { t[n++] = (char)('0' + mb % 10); mb /= 10; }
+    while (n) out[i++] = t[--n];
+    out[i++] = ' '; out[i++] = 'M'; out[i++] = 'B'; out[i] = 0;
+}
+
+/* "Primary master - 1234 MB" into out (at least 48 bytes) */
+static void disk_line(char *out, const struct inst_disk *d)
+{
+    int n = 0;
+    const char *s = d->name;
+
+    while (*s) out[n++] = *s++;
+    out[n++] = ' '; out[n++] = '-'; out[n++] = ' ';
+    fmt_mb(out + n, d->sectors / 2048);
+}
+
 static void bar(int x, int y, int w, int pct)
 {
     int i, filled = w * pct / 100;
@@ -156,6 +183,18 @@ static int key_wait(uint8_t (*getkey)(void))
 #define WW 60
 #define WH 16
 
+static void screen_unavailable(uint8_t (*getkey)(void))
+{
+    backdrop("ESC = Back");
+    window(WX, WY, WW, WH, " Setup is not available ");
+
+    ctext(WX, WW, WY + 4, "Setup needs the Yellowfin boot image.", A_WARN);
+    ctext(WX, WW, WY + 7, "Boot from the ISO or yellowfin.img,", A_WIN);
+    ctext(WX, WW, WY + 8, "not with QEMU's -kernel option.", A_WIN);
+
+    while (getkey() != 27) { }
+}
+
 static int screen_welcome(uint8_t (*getkey)(void))
 {
     backdrop("ENTER = Next    ESC = Cancel");
@@ -165,56 +204,119 @@ static int screen_welcome(uint8_t (*getkey)(void))
     ctext(WX, WW, WY + 5, "><(((('>", A_FISH);
     ctext(WX, WW, WY + 8,  "This wizard will install Yellowfin OS", A_WIN);
     ctext(WX, WW, WY + 9,  "on your computer.", A_WIN);
-    ctext(WX, WW, WY + 12, "Version 0.0.1  -  Corn Kernel + Shark Loader", A_FISH);
+    ctext(WX, WW, WY + 12, "Version 0.2  -  Corn Kernel + Shark Loader", A_FISH);
 
     return key_wait(getkey);
 }
 
-static int screen_disk(uint8_t (*getkey)(void))
+/* 1 = a disk was chosen (index in *chosen), 0 = cancelled */
+static int screen_disk(uint8_t (*getkey)(void), const struct inst_disk *d, int n, int *chosen)
 {
-    int mb = (int)(ata_sector_count() / 2048);
+    int sel = 0, i;
 
-    backdrop("ENTER = Next    ESC = Cancel");
-    window(WX, WY, WW, WH, " Where do you want to install Yellowfin OS? ");
+    for (i = 0; i < n; i++)
+        if (d[i].usable) { sel = i; break; }
 
-    text(WX + 3, WY + 3, "Available disks:", A_HEAD);
+    for (;;) {
+        uint8_t k;
 
-    fill(WX + 3, WY + 5, WW - 6, 1, ' ', A_SEL);
-    text(WX + 4, WY + 5, "Disk 1  (primary slave)", A_SEL);
-    number(WX + 40, WY + 5, mb, A_SEL);
-    text(WX + 40 + 5, WY + 5, "MB", A_SEL);
+        backdrop("UP/DOWN = Choose    ENTER = Next    ESC = Cancel");
+        window(WX, WY, WW, WH, " Where do you want to install Yellowfin OS? ");
 
-    text(WX + 3, WY + 9, "Setup will use the whole disk.", A_WIN);
+        text(WX + 3, WY + 3, "Available disks:", A_HEAD);
 
-    return key_wait(getkey);
+        if (n == 0)
+            text(WX + 4, WY + 5, "No ATA disks found.", A_WARN);
+
+        for (i = 0; i < n; i++) {
+            uint8_t a = (i == sel) ? A_SEL : A_WIN;
+            int y = WY + 5 + i;
+            char sz[16];
+
+            fmt_mb(sz, d[i].sectors / 2048);
+            fill(WX + 3, y, WW - 6, 1, ' ', a);
+            text(WX + 4, y, d[i].name, a);
+            text(WX + 24, y, sz, a);
+            if (d[i].note)
+                text(WX + 38, y, d[i].note, a);
+        }
+
+        text(WX + 3, WY + 11, "Setup will erase the chosen disk.", A_WIN);
+
+        k = getkey();
+        if (k == 27) return 0;
+        if (k == KEY_UP && sel > 0) sel--;
+        else if (k == KEY_DOWN && sel < n - 1) sel++;
+        else if (k == '\n' && n > 0 && d[sel].usable) { *chosen = sel; return 1; }
+    }
 }
 
-static int screen_confirm(uint8_t (*getkey)(void))
+static int screen_confirm(uint8_t (*getkey)(void), const struct inst_disk *d)
 {
+    char line[48];
+
+    disk_line(line, d);
+
     backdrop("ENTER = Install    ESC = Cancel");
     window(WX, WY, WW, WH, " Ready to install ");
 
-    ctext(WX, WW, WY + 4, "WARNING", A_WARN);
-    ctext(WX, WW, WY + 6, "All data on Disk 1 will be erased.", A_WARN);
-    ctext(WX, WW, WY + 9, "Press ENTER to begin installing.", A_WIN);
+    ctext(WX, WW, WY + 3, "WARNING", A_WARN);
+    ctext(WX, WW, WY + 5, "All data on this disk will be erased:", A_WARN);
+    ctext(WX, WW, WY + 7, line, A_HEAD);
+    ctext(WX, WW, WY + 10, "Press ENTER to begin installing.", A_WIN);
 
     return key_wait(getkey);
 }
 
-static const char *const steps[] = {
-    "Creating GPT partition table",
+#define NSTEPS 5
+static const char *const steps[NSTEPS] = {
+    "Checking disk",
+    "Copying Corn Kernel",
     "Formatting FTFS filesystem",
     "Copying Shark Loader",
-    "Copying Corn Kernel",
-    "Writing boot configuration"
+    "Verifying installation"
 };
-#define NSTEPS 5
 
-static void screen_install(void)
+static int cur_step;
+
+/* called by install_run() as it works */
+static void ui_progress(int step, int pct)
 {
-    int i, p;
+    char pc[8];
+    int n = 0, v = pct;
 
-    backdrop("Installing...  please wait");
+    if (step != cur_step) {
+        if (cur_step >= 0) {
+            text(WX + 2, WY + 3 + cur_step, " ", A_WIN);
+            text(WX + WW - 8, WY + 3 + cur_step, "OK", A_GOOD);
+        }
+        cur_step = step;
+        text(WX + 2, WY + 3 + step, ">", A_FISH);
+    }
+
+    fill(WX + 4, WY + 10, 40, 1, ' ', A_WIN);
+    bar(WX + 4, WY + 10, 40, pct);
+
+    if (v == 0) pc[n++] = '0';
+    {
+        char t[4];
+        int m = 0;
+        while (v > 0) { t[m++] = (char)('0' + v % 10); v /= 10; }
+        while (m) pc[n++] = t[--m];
+    }
+    pc[n++] = '%';
+    pc[n] = 0;
+    fill(WX + 46, WY + 10, 6, 1, ' ', A_WIN);
+    text(WX + 46, WY + 10, pc, A_WIN);
+
+    bar(WX + 4, WY + 12, 40, (step * 100 + pct) / NSTEPS);
+}
+
+static int screen_install(const struct inst_disk *d)
+{
+    int i, err;
+
+    backdrop("Installing...  do not turn off the computer");
     window(WX, WY, WW, WH, " Installing Yellowfin OS ");
 
     for (i = 0; i < NSTEPS; i++)
@@ -223,40 +325,56 @@ static void screen_install(void)
     text(WX + 4, WY + 9, "Current step", A_HEAD);
     text(WX + 4, WY + 11, "Total", A_HEAD);
 
-    for (i = 0; i < NSTEPS; i++) {
-        text(WX + 2, WY + 3 + i, ">", A_FISH);
-        for (p = 0; p <= 100; p += 5) {
-            fill(WX + 4, WY + 10, 40, 1, ' ', A_WIN);
-            bar(WX + 4, WY + 10, 40, p);
-            fill(WX + 46, WY + 10, 5, 1, ' ', A_WIN);
-            number(WX + 46, WY + 10, p, A_WIN);
-            text(WX + 46 + (p >= 100 ? 3 : (p >= 10 ? 2 : 1)), WY + 10, "%", A_WIN);
+    cur_step = -1;
+    err = install_run(d, ui_progress);
 
-            bar(WX + 4, WY + 12, 40, (i * 100 + p) / NSTEPS);
-            wait_ticks(2);
-        }
-        text(WX + 2, WY + 3 + i, " ", A_WIN);
-        text(WX + WW - 8, WY + 3 + i, "OK", A_GOOD);
+    if (err == INST_OK) {
+        text(WX + 2, WY + 3 + cur_step, " ", A_WIN);
+        text(WX + WW - 8, WY + 3 + cur_step, "OK", A_GOOD);
+        bar(WX + 4, WY + 12, 40, 100);
+        wait_ticks(50);
     }
+    return err;
 }
 
-static void screen_done(uint8_t (*getkey)(void))
+static void screen_done(uint8_t (*getkey)(void), const struct inst_disk *d)
 {
-    backdrop("ENTER = Return to the shell");
+    char line[48];
+
+    disk_line(line, d);
+
+    backdrop("ENTER = Return to the desktop");
     window(WX, WY, WW, WH, " Setup complete ");
 
-    ctext(WX, WW, WY + 4, "><(((('>", A_FISH);
-    ctext(WX, WW, WY + 6, "Yellowfin OS setup is complete.", A_HEAD);
-    ctext(WX, WW, WY + 9, "(This was a preview: nothing was written to disk.)", A_WIN);
+    ctext(WX, WW, WY + 3, "><(((('>", A_FISH);
+    ctext(WX, WW, WY + 5, "Yellowfin OS was installed on:", A_HEAD);
+    ctext(WX, WW, WY + 6, line, A_HEAD);
+    ctext(WX, WW, WY + 9,  "Restart and boot from that disk", A_WIN);
+    ctext(WX, WW, WY + 10, "to start your new Yellowfin OS.", A_WIN);
+
+    key_wait(getkey);
+}
+
+static void screen_error(uint8_t (*getkey)(void), int err)
+{
+    backdrop("ENTER = Return to the desktop");
+    window(WX, WY, WW, WH, " Setup failed ");
+
+    ctext(WX, WW, WY + 4, "Installation did not finish.", A_WARN);
+    ctext(WX, WW, WY + 7, install_error(err), A_WIN);
+    ctext(WX, WW, WY + 10, "The disk was not made bootable.", A_WIN);
 
     key_wait(getkey);
 }
 
 void installer_run(uint8_t (*getkey)(void))
 {
+    struct inst_disk disks[INST_MAX_DISKS];
+    int n, chosen = 0, err;
+
     cursor_hide();
-	
-	    if (fbcon_on()) {
+
+    if (fbcon_on()) {
         ox = ((int)fbcon_cols() - W) / 2;
         oy = ((int)fbcon_rows() - H) / 2;
         if (ox < 0) ox = 0;
@@ -267,9 +385,17 @@ void installer_run(uint8_t (*getkey)(void))
         oy = 0;
     }
 
-    if (screen_welcome(getkey) && screen_disk(getkey) && screen_confirm(getkey)) {
-        screen_install();
-        screen_done(getkey);
+    if (!payload_ok()) {
+        screen_unavailable(getkey);
+    } else if (screen_welcome(getkey)) {
+        n = install_probe(disks, INST_MAX_DISKS);
+
+        if (screen_disk(getkey, disks, n, &chosen) &&
+            screen_confirm(getkey, &disks[chosen])) {
+            err = screen_install(&disks[chosen]);
+            if (err == INST_OK) screen_done(getkey, &disks[chosen]);
+            else                screen_error(getkey, err);
+        }
     }
 
     cursor_show();
