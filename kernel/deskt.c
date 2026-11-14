@@ -8,6 +8,8 @@
 #include "keys.h"
 #include "calc.h"
 #include "cmd.h"
+#include "explorer.h"
+#include "startmenu.h"
 #include "assets/icons/cursors/cursor.xpm"
 #include "assets/icons/fishlogo.xpm"
 #include "assets/icons/fishlogoslctd.xpm"
@@ -16,13 +18,7 @@
 #define ORB_X   6
 #define ORB_SZ  44
 
-#define MENU_X    4
-#define MENU_W    200
-#define ITEM_H    32
-#define MENU_PAD  4
-#define MENU_N    6
-
-enum { WIN_NONE, WIN_ABOUT, WIN_FTFS, WIN_BIN, WIN_CALC, WIN_CMD };
+enum { WIN_NONE, WIN_ABOUT, WIN_FTFS, WIN_BIN, WIN_CALC, WIN_CMD, WIN_EXPL };
 
 struct dicon { int x, y; const char *label; int win; };
 
@@ -32,14 +28,6 @@ static const struct dicon icons[NICONS] = {
     { 48, 140, "Recycle Bin",     WIN_BIN   },
 };
 
-static const char *menu_items[MENU_N] = {
-    "Install Yellowfin",
-    "FTFS Files",
-    "About Yellowfin",
-    "Exit to shell",
-    "Calculator",
-	"Command Prompt"
-};
 static uint32_t cur_px[12 * 19], logo_px[64 * 64], logo_sel_px[64 * 64];
 static gfx_image img_cur, img_logo, img_logo_sel;
 
@@ -92,32 +80,18 @@ static void open_win(int kind)
     else if (kind == WIN_BIN)  t = "Recycle Bin";
     else if (kind == WIN_CALC) t = "Calculator";
     else if (kind == WIN_CMD)  t = "Command Prompt";
+	else if (kind == WIN_EXPL) t = "Fish Explorer";
 
     if (kind == WIN_CALC)
         wm_open(kind, t, CALC_W, CALC_H);
     else if (kind == WIN_CMD)
         wm_open(kind, t, CMD_W, CMD_H);
+	else if (kind == WIN_EXPL) 
+		wm_open(kind, t, EX_W, EX_H);
     else
         wm_open(kind, t, 420, 240);
 }
 
-/* ---- start menu geometry ---- */
-
-static int menu_h(void) { return MENU_N * ITEM_H + 2 * MENU_PAD; }
-static int menu_y(void) { return (int)gfx_h() - GLASS_TASKBAR_H - menu_h() - 2; }
-
-/* -1 outside the panel, -2 inside but not on an item, else item index */
-static int menu_hit(int mx, int my)
-{
-    int y = menu_y(), i;
-
-    if (!inside(mx, my, MENU_X, y, MENU_W, menu_h()))
-        return -1;
-    if (my - y < MENU_PAD)
-        return -2;
-    i = (my - y - MENU_PAD) / ITEM_H;
-    return i < MENU_N ? i : -2;
-}
 
 /* ---- drawing ---- */
 
@@ -137,8 +111,8 @@ static void draw_bin_icon(int x, int y)       /* placeholder, swap for an XPM la
 static void draw_about(int x, int y)
 {
     static const char *lines[] = {
-        "Yellowfin OS 0.0.1", "Codename: Fish", "Architecture: i686",
-        "Graphics: VBE framebuffer", "Shell: fsh", "Kernel: Corn"
+        "Yellowfin OS 0.2", "Codename: Fish", "Architecture: i686",
+        "Graphics: VBE framebuffer", "Shell: fsh", "Kernel: Corn" 
     };
 
     for (int i = 0; i < 6; i++)
@@ -204,6 +178,7 @@ static void draw_windows(void)
         else if (w->kind == WIN_BIN)  draw_bin(w->x, w->y);
         else if (w->kind == WIN_CALC) calc_draw(w->x, w->y);
         else if (w->kind == WIN_CMD)  cmd_draw(w->x, w->y);
+		else if (w->kind == WIN_EXPL) explorer_draw(w->x, w->y, w->w, w->h);
     }
 
     glass_focused = 1;                           /* leave defaults for other glass_window users */
@@ -231,22 +206,6 @@ static void draw_tb_buttons(void)
     }
 }
 
-static void draw_menu(void)
-{
-    int y = menu_y(), h = menu_h();
-
-    gfx_blend_rect(MENU_X + 4, y + 4, MENU_W, h, 0x000000, 90);
-    gfx_blend_rect(MENU_X, y, MENU_W, h, 0xA0C8F0, 170);
-    gfx_frame(MENU_X, y, MENU_W, h, 0xFFFFFF);
-
-    for (int i = 0; i < MENU_N; i++) {
-        int iy = y + MENU_PAD + i * ITEM_H;
-
-        if (i == hover_item)
-            glass_highlight(MENU_X + 4, iy, MENU_W - 8, ITEM_H);
-        gfx_text(MENU_X + 16, iy + 8, menu_items[i], 0x10243A);
-    }
-}
 
 /* compose the whole desktop into the back buffer, then flip only (fx,fy,fw,fh) */
 static void draw_desktop_rect(int fx, int fy, int fw, int fh)
@@ -283,7 +242,7 @@ static void draw_desktop_rect(int fx, int fy, int fw, int fh)
     gfx_blit_scaled(hover_orb ? &img_logo_sel : &img_logo, ORB_X, orb_y(), ORB_SZ, ORB_SZ);
 
     if (menu_open)
-        draw_menu();
+        startmenu_draw(hover_item, &img_logo);
 
     gfx_flip_rect(fx, fy, fw, fh);
 }
@@ -333,12 +292,16 @@ static void menu_action(int i)
 {
     menu_open = 0;
 
-    if (i == 0)      run_installer();
-    else if (i == 1) open_win(WIN_FTFS);
-    else if (i == 2) open_win(WIN_ABOUT);
-    else if (i == 3) want_exit = 1;
-    else if (i == 4) open_win(WIN_CALC);
-    else if (i == 5) open_win(WIN_CMD);
+    switch (startmenu_act(i)) {
+    case SM_EXPL:  open_win(WIN_EXPL);  break;
+    case SM_CMD:   open_win(WIN_CMD);   break;
+    case SM_CALC:  open_win(WIN_CALC);  break;
+    case SM_INST:  run_installer();     break;
+    case SM_ABOUT: open_win(WIN_ABOUT); break;
+    case SM_BIN:   open_win(WIN_BIN);   break;
+    case SM_FTFS:  open_win(WIN_FTFS);  break;
+    case SM_EXIT:  want_exit = 1;       break;
+    }
 }
 
 /* ---- pointer handling ---- */
@@ -373,7 +336,7 @@ static void pointer_update(int btn)
     ho = inside(mx, my, ORB_X, orb_y(), ORB_SZ, ORB_SZ);
 
     if (menu_open) {
-        inmenu = menu_hit(mx, my);
+        inmenu = startmenu_hit(mx, my);
         if (inmenu >= 0)
             hm = inmenu;
     }
@@ -425,6 +388,13 @@ static void pointer_update(int btn)
                     if (calc_click(mx, my, w->x, w->y))
                         dirty = 1;
                 }
+				                if (w && !w->minimized && w->kind == WIN_EXPL &&
+                    inside(mx, my, w->x, w->y + GLASS_TITLE_H,
+                           w->w, w->h - GLASS_TITLE_H)) {
+                    if (explorer_click(mx, my, w->x, w->y, w->w, w->h))
+                        dirty = 1;
+                } 
+				
             } else if (hi >= 0) {
                 open_win(icons[hi].win);
             }
@@ -450,6 +420,7 @@ void desktop_run(int (*poll_key)(void))
     wm_init();
     calc_reset();
     cmd_reset();
+	explorer_reset();
     menu_open = 0;
     hover_icon = hover_item = -1;
     hover_orb = 0;
@@ -498,7 +469,18 @@ void desktop_run(int (*poll_key)(void))
                 if (r == 2) { wm_close(s); redraw(); continue; }
                 if (r)      { redraw(); continue; }
             }
-        }                                                  /* <-- new block ends */
+        }            										/* <-- new block ends */
+
+        /* Focused Fish Explorer gets keys before arrows move the cursor. */
+        {
+            int s = wm_top();
+            struct wm_win *w = (s >= 0) ? wm_get(s) : 0;
+
+            if (w && !w->minimized && w->kind == WIN_EXPL && explorer_key(k)) {
+                redraw();
+                continue;
+            }
+        }		
 
         if (k == 'q' || k == 'Q')
             break;
