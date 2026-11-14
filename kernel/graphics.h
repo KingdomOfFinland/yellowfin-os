@@ -19,6 +19,8 @@ void gfx_frame(int x, int y, int w, int h, uint32_t c);          /* 1px outline 
 void gfx_vgradient(int x, int y, int w, int h, uint32_t top, uint32_t bottom);
 void gfx_blend_rect(int x, int y, int w, int h, uint32_t c, uint32_t alpha); /* alpha 0..255 */
 void gfx_text(int x, int y, const char *s, uint32_t fg);
+void gfx_text_mono(int x, int y, const char *s, uint32_t fg);
+int  gfx_text_width(const char *s);
 
 void gfx_blit(const gfx_image *im, int x, int y);
 void gfx_blit_scaled(const gfx_image *im, int x, int y, int w, int h);
