@@ -1,15 +1,20 @@
 #include "ata.h"
 
-#define ATA_DATA     0x1F0
-#define ATA_ERROR    0x1F1
-#define ATA_SECCOUNT 0x1F2
-#define ATA_LBA_LO   0x1F3
-#define ATA_LBA_MID  0x1F4
-#define ATA_LBA_HI   0x1F5
-#define ATA_DRIVE    0x1F6
-#define ATA_STATUS   0x1F7
-#define ATA_CMD      0x1F7
-#define ATA_ALTSTAT  0x3F6
+/* The selected channel decides the port base. ata_select2() switches it. */
+static uint16_t io  = 0x1F0;      /* command block */
+static uint16_t ctl = 0x3F6;      /* control block (alternate status / device control) */
+static uint8_t  ata_drv = 0;      /* 0 = master, 1 = slave */
+
+#define ATA_DATA     (io + 0)
+#define ATA_ERROR    (io + 1)
+#define ATA_SECCOUNT (io + 2)
+#define ATA_LBA_LO   (io + 3)
+#define ATA_LBA_MID  (io + 4)
+#define ATA_LBA_HI   (io + 5)
+#define ATA_DRIVE    (io + 6)
+#define ATA_STATUS   (io + 7)
+#define ATA_CMD      (io + 7)
+#define ATA_ALTSTAT  (ctl)
 
 #define SR_BSY  0x80
 #define SR_DRDY 0x40
@@ -41,6 +46,15 @@ static inline void outw(uint16_t p, uint16_t v) {
     __asm__ volatile ("outw %0, %1" : : "a"(v), "Nd"(p));
 }
 
+void ata_select2(int channel, int slave)
+{
+    io  = channel ? 0x170 : 0x1F0;
+    ctl = channel ? 0x376 : 0x3F6;
+    ata_drv = slave ? 1 : 0;
+}
+
+void ata_select(int slave) { ata_select2(0, slave); }
+
 // ~400ns delay: 4 reads of the alternate status register
 static void ata_delay(void) {
     inb(ATA_ALTSTAT); inb(ATA_ALTSTAT); inb(ATA_ALTSTAT); inb(ATA_ALTSTAT);
@@ -55,10 +69,6 @@ static int ata_wait_bsy(void) {
     return -1;
 }
 
-static uint8_t ata_drv = 0;                    // 0 = master, 1 = slave
-
-void ata_select(int slave) { ata_drv = slave ? 1 : 0; }
-
 // wait for DRQ (data ready); 0 = ok, -1 = timeout/error
 static int ata_wait_drq(void) {
     ata_delay();
@@ -71,9 +81,11 @@ static int ata_wait_drq(void) {
 }
 
 int ata_init(void) {
-    outb(ATA_ALTSTAT, 0x02);          // nIEN: disable interrupts, we poll
-    outb(ATA_DRIVE, 0xA0 | (ata_drv << 4));           // select master
+    outb(ATA_ALTSTAT, 0x02);                          // nIEN: disable interrupts, we poll
+    outb(ATA_DRIVE, 0xA0 | (ata_drv << 4));           // select the drive
     ata_delay();
+
+    total_sectors = 0;
 
     outb(ATA_SECCOUNT, 0);
     outb(ATA_LBA_LO, 0);
@@ -99,7 +111,8 @@ uint32_t ata_sector_count(void) { return total_sectors; }
 
 static void ata_setup(uint32_t lba, uint8_t cmd) {
     ata_wait_bsy();
-    outb(ATA_DRIVE, 0xE0 | (ata_drv << 4) | ((lba >> 24) & 0x0F));   // master, LBA mode
+    outb(ATA_DRIVE, 0xE0 | (ata_drv << 4) | ((lba >> 24) & 0x0F));   // LBA mode
+    ata_delay();                                                     // let the drive select settle
     outb(ATA_SECCOUNT, 1);
     outb(ATA_LBA_LO,  lba & 0xFF);
     outb(ATA_LBA_MID, (lba >> 8) & 0xFF);
