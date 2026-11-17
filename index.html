@@ -41,6 +41,20 @@ section{padding-block:47px}.section-head{margin-bottom:23px}h2{margin:0 0 5px;fo
 .tag{display:inline-block;padding:4px 10px;border:1px solid #8bd5ff88;border-radius:99px;color:#bfeaff;font-size:12px;font-weight:800;letter-spacing:.04em}
 .checklist{margin:0;padding:17px 20px 17px 37px;border:1px solid #ffffff20;border-radius:12px;background:#06172766;color:#d2e5f3;font-size:13px}.checklist li+li{margin-top:7px}
 footer{margin-top:55px;padding:28px 15px 38px;border-top:1px solid var(--line);text-align:center;color:#abc2d5;font-size:13px}footer a{text-decoration:none}
+
+.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.shot{overflow:hidden;min-height:190px;padding:0}
+.shot-preview{min-height:145px;padding:16px;background:linear-gradient(145deg,#0b2238,#174d70);border-bottom:1px solid var(--line);font:12px/1.7 Consolas,"Courier New",monospace;color:#c9eaff}
+.shot-preview .bar{margin:-16px -16px 14px;padding:8px 12px;background:#d8f3ff20;border-bottom:1px solid #d8f3ff30;font:11px "Segoe UI",sans-serif}
+.shot-preview .fishshot{font:40px/1.3 "Segoe UI Emoji",sans-serif;text-align:center}
+.shot figcaption{padding:13px 15px;color:var(--muted);font-size:13px}
+.roadmap{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.roadmap article{padding:20px}
+.roadmap ul{margin:12px 0 0;padding-left:19px;color:var(--muted);font-size:14px}
+.status{display:inline-block;padding:3px 8px;border:1px solid #a9e3ff66;border-radius:99px;color:#bfeaff;font-size:11px;font-weight:750;letter-spacing:.04em}
+@media(max-width:780px){.gallery,.roadmap{grid-template-columns:1fr 1fr}}
+@media(max-width:540px){.gallery,.roadmap{grid-template-columns:1fr}}
+
 @media(max-width:780px){.hero{grid-template-columns:1fr;min-height:auto;padding-block:65px}.vm-window{max-width:570px;transform:none}.grid{grid-template-columns:repeat(2,1fr)}.release{grid-template-columns:1fr}.specs{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:540px){.wrap{width:min(100% - 30px,1100px)}.nav{align-items:flex-start;flex-direction:column;padding-block:11px;gap:9px}nav{gap:13px}nav a{font-size:13px}.hero{padding-block:52px}.grid{grid-template-columns:1fr}.tile{min-height:0}.screen{min-height:240px;padding:17px}.taskbar{margin:24px -17px -17px}.release,.about{padding:20px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition-duration:.01ms!important}}
@@ -49,7 +63,7 @@ footer{margin-top:55px;padding:28px 15px 38px;border-top:1px solid var(--line);t
 <body>
 <header class="topbar"><div class="wrap nav">
 <a class="brand" href="#top"><span class="fish" aria-hidden="true">🐟</span><span>YellowfinOS</span></a>
-<nav aria-label="Main navigation"><a href="#about">about</a><a href="#features">features</a><a href="#specs">system</a><a href="#download">downloads</a><a href="https://github.com/KingdomOfFinland/yellowfin-os">source ↗</a></nav>
+<nav aria-label="Main navigation"><a href="#about">about</a><a href="#features">features</a><a href="#gallery">screenshots</a><a href="#roadmap">roadmap</a><a href="#specs">system</a><a href="#download">downloads</a><a href="https://github.com/KingdomOfFinland/yellowfin-os">source ↗</a></nav>
 </div></header>
 <main class="wrap" id="top">
 <section class="hero">
@@ -80,6 +94,22 @@ footer{margin-top:55px;padding:28px 15px 38px;border-top:1px solid var(--line);t
 <article class="glass tile"><div class="icon">🪟</div><h3>glass desktop</h3><p>Rounded window corners, glossy gradients, and active/inactive window styling keep the interface evolving.</p></article>
 <article class="glass tile"><div class="icon">🧪</div><h3>built to experiment</h3><p>New ideas, debugging, fixes, and features. The project grows as the system grows.</p></article>
 </div></section>
+
+<section id="gallery"><div class="section-head"><h2>a look inside</h2><p>the desktop, shell and tools — real screenshots will be added as captures are published.</p></div>
+<div class="gallery">
+<figure class="glass shot"><div class="shot-preview"><div class="bar">YellowfinOS · desktop</div><div class="fishshot">🐟</div><div style="text-align:center;font:14px 'Segoe UI',sans-serif">YellowfinOS desktop</div><div style="margin-top:13px;padding:5px;background:#b4e8ff20">◈ start &nbsp; desktop &nbsp; terminal</div></div><figcaption><b>the desktop</b><br>illustrative preview; not a captured screenshot.</figcaption></figure>
+<figure class="glass shot"><div class="shot-preview"><div class="bar">fish@yellowfin — fsh</div><div><span class="prompt">fish@yellowfin ~ $</span> help</div><div class="dim">available commands...</div><div style="margin-top:8px"><span class="prompt">fish@yellowfin ~ $</span> _</div></div><figcaption><b>the Fish shell</b><br>illustrative preview; not a captured screenshot.</figcaption></figure>
+<figure class="glass shot"><div class="shot-preview"><div class="bar">Fish Explorer</div><div>📁 /</div><div style="padding-left:15px">📂 system</div><div style="padding-left:15px">📂 apps</div><div style="padding-left:15px">💾 data</div></div><figcaption><b>Fish Explorer</b><br>illustrative preview; not a captured screenshot.</figcaption></figure>
+</div>
+<div class="notice glass">these are visual placeholders, not screenshots from a running build. actual captures can replace them once you add the desktop screenshots to the repository.</div></section>
+<section id="roadmap"><div class="section-head"><h2>where the fish is swimming</h2><p>a living roadmap — priorities can change as development continues.</p></div>
+<div class="roadmap">
+<article class="glass"><span class="status">in 0.2</span><h3>current foundations</h3><ul><li>Corn Kernel for i686</li><li>Fish shell and graphical desktop</li><li>Start Menu and Fish Explorer</li><li>interactive disk installer</li><li>FTFS and ATA storage work</li></ul></article>
+<article class="glass"><span class="status">next priorities</span><h3>polish & reliability</h3><ul><li>improve desktop interaction and window handling</li><li>continue mouse and input support</li><li>test storage and installer edge cases</li><li>document known hardware limitations</li></ul></article>
+<article class="glass"><span class="status">longer term</span><h3>hardware & expansion</h3><ul><li>broader display and chipset support</li><li>more drivers and device support</li><li>more built-in desktop utilities</li><li>more compatibility testing beyond emulators</li></ul></article>
+</div>
+</section>
+
 <section id="specs"><div class="section-head"><h2>the technical bits</h2><p>A quick look at the current project foundations.</p></div>
 <div class="specs"><div class="spec"><b>0.2</b><span>current version</span></div><div class="spec"><b>i686</b><span>target architecture</span></div><div class="spec"><b>C + NASM</b><span>kernel and low-level code</span></div><div class="spec"><b>Corn Kernel</b><span>custom kernel</span></div><div class="spec"><b>QEMU</b><span>primary test environment</span></div><div class="spec"><b>FTFS + ATA</b><span>storage stack</span></div><div class="spec"><b>VM first</b><span>recommended testing</span></div></div></section>
 <section id="download"><div class="glass release"><div>
