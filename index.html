@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#123b60">
-<meta name="description" content="YellowfinOS 0.2 is a from-scratch experimental i686 hobby operating system, featuring the Corn Kernel, Fish shell, graphical desktop, and new Command Prompt window.">
+<meta name="description" content="YellowfinOS 0.3 is a from-scratch experimental i686 hobby operating system, featuring the Corn Kernel, Fish shell, graphical desktop, new shell commands, and expanding internet drivers.">
 <title>YellowfinOS — a little different. a little fishy.</title>
 <style>
 :root{color-scheme:dark;--ink:#f4f9ff;--muted:#c4d8e9;--soft:#91b8d4;--line:#d9efff42;--cyan:#a9e3ff}
@@ -68,9 +68,9 @@ footer{margin-top:55px;padding:28px 15px 38px;border-top:1px solid var(--line);t
 <main class="wrap" id="top">
 <section class="hero">
 <div>
-<div class="eyebrow">yellowfinos · version 0.2</div>
+<div class="eyebrow">yellowfinos · version 0.3</div>
 <h1>A little different.<br><span>A little fishy.</span></h1>
-<p class="lead">Meet YellowfinOS 0.2: an experimental operating system built from the ground up. Its own kernel, its own shell, and a desktop that keeps growing — now with a Start Menu, Fish Explorer, a disk installer, and a more polished glass-style interface. No Linux distribution underneath. Just a fish doing computer things.</p>
+<p class="lead">Meet YellowfinOS 0.3: an experimental operating system built from the ground up. Its own kernel, its own shell, and a desktop that keeps growing — now with new internet drivers, including e1000 Ethernet and IPv4 support, plus new shell commands. No Linux distribution underneath. Just a fish doing computer things.</p>
 <div class="actions"><a class="button" href="https://github.com/KingdomOfFinland/yellowfin-os/releases/tag/operatingsystem1">↓ explore releases</a><a class="button secondary" href="https://github.com/KingdomOfFinland/yellowfin-os">view the source ↗</a></div>
 <div class="notice glass"><strong>⚠ experimental software</strong><br>YellowfinOS is early-stage and may contain bugs, missing features, and incomplete drivers. Use a virtual machine or emulator for testing. Do not rely on it for important data.</div>
 </div>
@@ -80,7 +80,7 @@ footer{margin-top:55px;padding:28px 15px 38px;border-top:1px solid var(--line);t
 </div>
 </section>
 <section id="about"><div class="section-head"><h2>so, what is YellowfinOS?</h2><p>A small operating system project with a big appetite for learning.</p></div>
-<div class="glass about"><p class="muted">YellowfinOS 0.2 is a from-scratch operating system project for the i686 architecture. It brings together boot code, the Corn Kernel, ATA storage support, FTFS, the Fish shell, and an experimental graphical desktop. Recent 0.2 work adds a Windows-inspired Start Menu, Fish Explorer, an interactive disk installer, improved ATA drive selection, and FTFS support for separating the boot disk from a data disk. The desktop also continues to evolve with rounded windows and glass-style visuals. The goal is to learn how the pieces fit together by building them — and improving them one step at a time.</p></div></section>
+<div class="glass about"><p class="muted">YellowfinOS 0.3 is a from-scratch operating system project for the i686 architecture. It brings together boot code, the Corn Kernel, ATA storage support, FTFS, the Fish shell, and an experimental graphical desktop. The 0.3 release adds new internet drivers (including e1000 Ethernet and IPv4 components) and new shell commands. Earlier desktop and storage work includes the Windows-inspired Start Menu, Fish Explorer, interactive disk installer, FTFS, and ATA drive support. Networking is actively expanding, and support varies by device and build. The goal is to learn how the pieces fit together by building them — and improving them one step at a time.</p></div></section>
 <section id="features"><div class="section-head"><h2>under the surface</h2><p>Meet some of the parts that make the fish swim.</p></div>
 <div class="grid">
 <article class="glass tile"><div class="icon">⚙️</div><h3>Corn Kernel</h3><p>The custom C-based kernel at the heart of YellowfinOS, targeting 32-bit i686 systems.</p></article>
@@ -92,6 +92,7 @@ footer{margin-top:55px;padding:28px 15px 38px;border-top:1px solid var(--line);t
 <article class="glass tile"><div class="icon">💾</div><h3>FTFS storage</h3><p>The custom filesystem can mount the boot disk separately from a data disk, with blank-disk detection and formatting support.</p></article>
 <article class="glass tile"><div class="icon">🧩</div><h3>ATA disk support</h3><p>Improved drive and channel selection for probing and working with multiple ATA devices.</p></article>
 <article class="glass tile"><div class="icon">🪟</div><h3>glass desktop</h3><p>Rounded window corners, glossy gradients, and active/inactive window styling keep the interface evolving.</p></article>
+<article class="glass tile"><div class="icon">🌐</div><h3>internet drivers</h3><p>New networking components in 0.3, including the e1000 Ethernet driver and IPv4 support. The network stack is still experimental.</p></article>
 <article class="glass tile"><div class="icon">🧪</div><h3>built to experiment</h3><p>New ideas, debugging, fixes, and features. The project grows as the system grows.</p></article>
 </div></section>
 
@@ -104,18 +105,18 @@ footer{margin-top:55px;padding:28px 15px 38px;border-top:1px solid var(--line);t
 <div class="notice glass">these are visual placeholders, not screenshots from a running build. actual captures can replace them once you add the desktop screenshots to the repository.</div></section>
 <section id="roadmap"><div class="section-head"><h2>where the fish is swimming</h2><p>a living roadmap — priorities can change as development continues.</p></div>
 <div class="roadmap">
-<article class="glass"><span class="status">in 0.2</span><h3>current foundations</h3><ul><li>Corn Kernel for i686</li><li>Fish shell and graphical desktop</li><li>Start Menu and Fish Explorer</li><li>interactive disk installer</li><li>FTFS and ATA storage work</li></ul></article>
+<article class="glass"><span class="status">in 0.3</span><h3>current foundations</h3><ul><li>Corn Kernel for i686</li><li>Fish shell and new commands</li><li>graphical desktop and Fish Explorer</li><li>FTFS and ATA storage work</li><li>new e1000 and IPv4 internet drivers</li></ul></article>
 <article class="glass"><span class="status">next priorities</span><h3>polish & reliability</h3><ul><li>improve desktop interaction and window handling</li><li>continue mouse and input support</li><li>test storage and installer edge cases</li><li>document known hardware limitations</li></ul></article>
 <article class="glass"><span class="status">longer term</span><h3>hardware & expansion</h3><ul><li>broader display and chipset support</li><li>more drivers and device support</li><li>more built-in desktop utilities</li><li>more compatibility testing beyond emulators</li></ul></article>
 </div>
 </section>
 
 <section id="specs"><div class="section-head"><h2>the technical bits</h2><p>A quick look at the current project foundations.</p></div>
-<div class="specs"><div class="spec"><b>0.2</b><span>current version</span></div><div class="spec"><b>i686</b><span>target architecture</span></div><div class="spec"><b>C + NASM</b><span>kernel and low-level code</span></div><div class="spec"><b>Corn Kernel</b><span>custom kernel</span></div><div class="spec"><b>QEMU</b><span>primary test environment</span></div><div class="spec"><b>FTFS + ATA</b><span>storage stack</span></div><div class="spec"><b>VM first</b><span>recommended testing</span></div></div></section>
+<div class="specs"><div class="spec"><b>0.3</b><span>current version</span></div><div class="spec"><b>i686</b><span>target architecture</span></div><div class="spec"><b>C + NASM</b><span>kernel and low-level code</span></div><div class="spec"><b>Corn Kernel</b><span>custom kernel</span></div><div class="spec"><b>QEMU</b><span>primary test environment</span></div><div class="spec"><b>FTFS + ATA</b><span>storage stack</span></div><div class="spec"><b>VM first</b><span>recommended testing</span></div></div></section>
 <section id="download"><div class="glass release"><div>
-<span class="tag">YELLOWFINOS · VERSION 0.2</span><h2 style="margin-top:12px">take it for a spin.</h2>
-<p class="muted">YellowfinOS 0.2 now includes a Start Menu, Fish Explorer, and an interactive disk installer, alongside ongoing desktop and storage improvements. The installer erases the selected target disk. Test it only with a disposable virtual disk — never a drive containing files you want to keep. Hardware support remains incomplete; read the release notes before trying it.</p>
-<div class="actions"><a class="button" href="https://github.com/kingdomoffinland/yellowfin-os/releases/download/operatingsystem1/yellowfin.iso">↓ download YellowfinOS 0.2 (.iso)</a><a class="button secondary" href="https://github.com/KingdomOfFinland/yellowfin-os/releases/tag/operatingsystem1">release notes ↗</a><a class="button secondary" href="https://copy.sh/v86/">try the v86 emulator ↗</a></div>
+<span class="tag">YELLOWFINOS · VERSION 0.3</span><h2 style="margin-top:12px">take it for a spin.</h2>
+<p class="muted">YellowfinOS 0.3 brings new internet drivers, including e1000 Ethernet and IPv4 components, plus new shell commands. Earlier releases added the Start Menu, Fish Explorer, and interactive disk installer. The installer erases the selected target disk. Test it only with a disposable virtual disk — never a drive containing files you want to keep. Hardware and networking support remain experimental; read the release notes before trying it.</p>
+<div class="actions"><a class="button" href="https://github.com/kingdomoffinland/yellowfin-os/releases/download/operatingsystem1/yellowfin.iso">↓ download YellowfinOS 0.3 (.iso)</a><a class="button secondary" href="https://github.com/KingdomOfFinland/yellowfin-os/releases/tag/operatingsystem1">release notes ↗</a><a class="button secondary" href="https://copy.sh/v86/">try the v86 emulator ↗</a></div>
 </div><ul class="checklist"><li>Test in a virtual machine or emulator.</li><li>Expect incomplete hardware support.</li><li>Keep important files outside test disks.</li><li>Check the repository for current build instructions.</li></ul></div></section>
 </main>
 <footer>YellowfinOS · a hobby operating system project 🐟<br><a href="https://github.com/KingdomOfFinland/yellowfin-os">GitHub repository</a> &nbsp;·&nbsp; not affiliated with tunaOS</footer>
