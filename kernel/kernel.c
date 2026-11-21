@@ -12,6 +12,15 @@
 #include "deskt.h"
 #include "glass.h"
 #include "keys.h"
+#include "pci.h"
+#include "arp.h"
+#include "ethernet.h"
+#include "ipv4.h"
+#include "icmp.h"
+#include "udp.h"
+#include "dns.h"
+#include "tcp.h"
+#include "http.h"
 
 #define VGA_W 80
 #define VGA_H 25
@@ -27,6 +36,16 @@
 
 /* special key defines */
 #define KEY_WIN  0x1001
+
+struct yf_header {
+    uint32_t magic;      /* 'CORN' */
+    uint32_t version;
+    uint32_t load_addr;  /* 0x100000 */
+    uint32_t entry;      /* 0x100010 or wherever _start lands */
+    uint32_t file_size;  /* bytes in the file */
+    uint32_t bss_size;   /* loader clears this after the image */
+    uint32_t checksum;
+};
 
 static volatile u16 *const VGA = (volatile u16 *)0xB8000;
 static int cur_x = 0, cur_y = 0;
@@ -357,7 +376,7 @@ static void fetch(void)
     kputs("              OS: ");
 
     color = 0x07;
-    kputs("Yellowfin OS 0.2\n");
+    kputs("Yellowfin OS 0.3\n");
 
     color = 0x0E;
     kputs("              Arch: ");
@@ -384,6 +403,26 @@ static int kbd_ready(void)
     return (st & 1) && !(st & 0x20);
 }
 
+static u32 http_shown;
+
+/* Prints at most ~1800 characters of a response, skipping CR and anything
+   unprintable. */
+static void http_sink(const u8 *d, u16 n)
+{
+    u16 i;
+
+    for (i = 0; i < n && http_shown < 1800; i++) {
+        u8 ch = d[i];
+
+        if (ch == '\r')
+            continue;
+        if (ch == '\n' || (ch >= 32 && ch < 127)) {
+            kputc((char)ch);
+            http_shown++;
+        }
+    }
+}
+
 /* Command interpreter */
 static void run(char *cmd)
 {
@@ -396,7 +435,8 @@ static void run(char *cmd)
     kputs("Commands: help, ver, gfxtest, desktop, clear, echo <text>, fetch, reboot\n");
     kputs("System:   time, date, timer, spin, free, dmesg\n");
     kputs("Files:    ls, write <name> <text>, cat <name>, rm <name>, df, format, savelog\n");
-    kputs("Network:  netinfo\n");
+    kputs("Network:  netinfo, netstat, iptest, arp_test, ping <ip>\n");
+    kputs("          nslookup <name>, httpget <host> [/path]\n");
     kputs("System:   install, crash <ud|div|gp>\n");
 	
 	    } else if (streq(cmd, "netinfo")) {
@@ -427,7 +467,8 @@ static void run(char *cmd)
         }
 
     } else if (streq(cmd, "ver")) {
-        kputs("Yellowfin OS 0.2\n");
+        kputs("Yellowfin OS 0.3\n");
+		kputs("The Network Update\n");
         kputs("Codename: Fish\n");
         kputs("Architecture: i686\n");
         kputs("Shell: fsh\n");
@@ -660,6 +701,358 @@ static void run(char *cmd)
         installer_run(getkey);
         kclear();
 		
+
+} else if (streq(cmd, "nettest")) {
+    u8 frame[60];
+    u8 rx_frame[2048];
+    int i;
+    int sent;
+    int received;
+    int found = 0;
+    u32 start;
+
+    static const u8 mac[6] = {
+        0x52, 0x54, 0x00, 0x12, 0x34, 0x56
+    };
+
+    if (!e1000_is_ready()) {
+        kputs("e1000 is not initialized.\n");
+        return;
+    }
+
+    /* Clear Ethernet frame */
+    for (i = 0; i < 60; i++)
+        frame[i] = 0;
+
+    /* Ethernet destination: broadcast */
+    for (i = 0; i < 6; i++)
+        frame[i] = 0xFF;
+
+    /* Ethernet source MAC */
+    for (i = 0; i < 6; i++)
+        frame[6 + i] = mac[i];
+
+    /* EtherType: ARP (0x0806) */
+    frame[12] = 0x08;
+    frame[13] = 0x06;
+
+    /* ARP header */
+    frame[14] = 0x00; /* Ethernet hardware */
+    frame[15] = 0x01;
+    frame[16] = 0x08; /* IPv4 protocol */
+    frame[17] = 0x00;
+    frame[18] = 6;    /* MAC length */
+    frame[19] = 4;    /* IPv4 length */
+    frame[20] = 0x00; /* ARP request */
+    frame[21] = 0x01;
+
+    /* Sender MAC */
+    for (i = 0; i < 6; i++)
+        frame[22 + i] = mac[i];
+
+    /* Sender IPv4: 10.0.2.15 */
+    frame[28] = 10;
+    frame[29] = 0;
+    frame[30] = 2;
+    frame[31] = 15;
+
+    /* Target MAC: unknown, leave zero */
+
+    /* Target IPv4: 10.0.2.2 */
+    frame[38] = 10;
+    frame[39] = 0;
+    frame[40] = 2;
+    frame[41] = 2;
+
+    kputs("Sending ARP request for 10.0.2.2...\n");
+
+    sent = e1000_send(frame, 60);
+
+    if (!sent) {
+        kputs("ARP TX: FAILED\n");
+        return;
+    }
+
+    kputs("ARP TX: SUCCESS\n");
+    kputs("Waiting for ARP reply...\n");
+
+    start = timer_ticks();
+
+    while ((u32)(timer_ticks() - start) < 200) {
+        received = e1000_receive(rx_frame, sizeof(rx_frame));
+
+        if (received >= 42) {
+            /* Ethernet EtherType must be ARP */
+            if (rx_frame[12] == 0x08 &&
+                rx_frame[13] == 0x06) {
+
+                /* ARP opcode must be reply (2) */
+                if (rx_frame[20] == 0x00 &&
+                    rx_frame[21] == 0x02) {
+
+                    /* Sender IP must be 10.0.2.2 */
+                    if (rx_frame[28] == 10 &&
+                        rx_frame[29] == 0 &&
+                        rx_frame[30] == 2 &&
+                        rx_frame[31] == 2) {
+
+                        found = 1;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if (found) {
+        kputs("ARP RX: GATEWAY REPLIED!\n");
+
+        kdebug("arp", "gateway MAC %02x:%02x:%02x:%02x:%02x:%02x",
+            rx_frame[22], rx_frame[23],
+            rx_frame[24], rx_frame[25],
+            rx_frame[26], rx_frame[27]);
+    } else {
+        kputs("ARP RX: NO GATEWAY REPLY\n");
+        e1000_rx_debug();
+    }
+
+    } else if (streq(cmd, "arp_test")) {
+        static const u8 gateway_ip[4] = {
+            10, 0, 2, 2
+        };
+
+        u8 gateway_mac[6];
+
+        kputs("Resolving gateway 10.0.2.2...\n");
+
+        if (arp_resolve(gateway_ip, gateway_mac)) {
+            kputs("ARP: gateway resolved!\n");
+
+            kdebug("arp",
+                "gateway MAC %02x:%02x:%02x:%02x:%02x:%02x",
+                gateway_mac[0], gateway_mac[1],
+                gateway_mac[2], gateway_mac[3],
+                gateway_mac[4], gateway_mac[5]);
+        } else {
+            kputs("ARP: resolution failed.\n");
+        }
+
+} else if (streq(cmd, "netstat")) {
+    ethernet_poll();    /* drain anything pending so the counters are current */
+
+    kputs("n\Ethernet statistics");
+    kputs("  rx frames:   "); kputu(eth_stats.rx_frames);   kputc('\n');
+    kputs("  rx arp:      "); kputu(eth_stats.rx_arp);      kputc('\n');
+    kputs("  rx ipv4:     "); kputu(eth_stats.rx_ipv4);     kputc('\n');
+    kputs("  rx ignored:  "); kputu(eth_stats.rx_ignored);  kputc('\n');
+    kputs("  rx filtered: "); kputu(eth_stats.rx_filtered); kputc('\n');
+    kputs("  rx short:    "); kputu(eth_stats.rx_short);    kputc('\n');
+    kputs("  tx frames:   "); kputu(eth_stats.tx_frames);   kputc('\n');
+    kputs("  tx errors:   "); kputu(eth_stats.tx_errors);   kputc('\n');
+	    kputs("n\IPv4 statistics");
+    kputs("  rx total:    "); kputu(ipv4_stats.rx_total);     kputc('\n');
+    kputs("  rx ok:       "); kputu(ipv4_stats.rx_ok);        kputc('\n');
+    kputs("  bad length:  "); kputu(ipv4_stats.bad_length);   kputc('\n');
+    kputs("  bad header:  "); kputu(ipv4_stats.bad_header);   kputc('\n');
+    kputs("  bad cksum:   "); kputu(ipv4_stats.bad_checksum); kputc('\n');
+    kputs("  not for us:  "); kputu(ipv4_stats.not_for_us);   kputc('\n');
+    kputs("  fragments:   "); kputu(ipv4_stats.fragments);    kputc('\n');
+    kputs("  icmp:        "); kputu(ipv4_stats.rx_icmp);      kputc('\n');
+    kputs("  other proto: "); kputu(ipv4_stats.rx_other);     kputc('\n');
+	    kputs("\nICMP statistics");
+    kputs("  echo req rx: "); kputu(icmp_stats.rx_echo_req);   kputc('\n');
+    kputs("  echo rep tx: "); kputu(icmp_stats.tx_echo_reply); kputc('\n');
+    kputs("  echo rep rx: "); kputu(icmp_stats.rx_echo_reply); kputc('\n');
+    kputs("  unmatched:   "); kputu(icmp_stats.rx_unmatched);  kputc('\n');
+    kputs("  bad cksum:   "); kputu(icmp_stats.bad_checksum);  kputc('\n');
+    kputs("  bad length:  "); kputu(icmp_stats.bad_length);    kputc('\n');
+	    kputs("\nUDP statistics\n");
+    kputs("  rx total:    "); kputu(udp_stats.rx_total);     kputc('\n');
+    kputs("  delivered:   "); kputu(udp_stats.rx_delivered); kputc('\n');
+    kputs("  no listener: "); kputu(udp_stats.no_listener);  kputc('\n');
+    kputs("  bad length:  "); kputu(udp_stats.bad_length);   kputc('\n');
+    kputs("  bad cksum:   "); kputu(udp_stats.bad_checksum); kputc('\n');
+    kputs("  tx total:    "); kputu(udp_stats.tx_total);     kputc('\n');
+	    kputs("\nTCP statistics\n");
+    kputs("  rx segments: "); kputu(tcp_stats.rx_segments);  kputc('\n');
+    kputs("  tx segments: "); kputu(tcp_stats.tx_segments);  kputc('\n');
+    kputs("  retransmits: "); kputu(tcp_stats.retransmits);  kputc('\n');
+    kputs("  resets rx:   "); kputu(tcp_stats.resets_rx);    kputc('\n');
+    kputs("  resets sent: "); kputu(tcp_stats.resets_sent);  kputc('\n');
+    kputs("  bad cksum:   "); kputu(tcp_stats.bad_checksum); kputc('\n');
+    kputs("  bad length:  "); kputu(tcp_stats.bad_length);   kputc('\n');
+	
+} else if (streq(cmd, "iptest")) {
+    int r = ipv4_selftest();
+
+    if (r == 0) {
+        kputs("ipv4 selftest: all cases passed\n");
+    } else {
+        kputs("ipv4 selftest: FAILED at case ");
+        kputu((u32)r);
+        kputc('\n');
+    }
+
+} else if (startswith(cmd, "ping ")) {
+    u8 dst[4];
+    int n, k;
+    u32 got = 0;
+
+    if (!ipv4_parse(cmd + 5, dst)) {
+        kputs("Usage: ping a.b.c.d\n");
+    } else if (!e1000_is_ready()) {
+        kputs("e1000 is not initialized.\n");
+    } else {
+        kputs("Pinging ");
+        for (k = 0; k < 4; k++) {
+            kputu(dst[k]);
+            if (k < 3) kputc('.');
+        }
+        kputs(" with 32 bytes of data:\n");
+
+        for (n = 0; n < 4; n++) {
+            u32 rtt = 0;
+            u8  ttl = 0;
+            u32 t0 = net_now_ms();
+            int r = icmp_ping(dst, (u16)(n + 1), 2000, &rtt, &ttl);
+
+            if (r == ICMP_OK) {
+                got++;
+                kputs("Reply from ");
+                for (k = 0; k < 4; k++) {
+                    kputu(dst[k]);
+                    if (k < 3) kputc('.');
+                }
+                kputs(": time=");
+                if (rtt < 10) kputs("<10"); else kputu(rtt);
+                kputs("ms ttl=");
+                kputu(ttl);
+                kputc('\n');
+            } else if (r == ICMP_ERR_TIMEOUT) {
+                kputs("Request timed out.\n");
+            } else if (r == ICMP_ERR_NOROUTE) {
+                kputs("Destination unreachable (ARP failed).\n");
+            } else {
+                kputs("Send failed.\n");
+            }
+
+            /* one ping per second */
+            while ((u32)(net_now_ms() - t0) < 1000)
+                ethernet_poll();
+        }
+
+        kputs("Sent = 4, received = ");
+        kputu(got);
+        kputc('\n');
+    }
+
+} else if (startswith(cmd, "nslookup ")) {
+    u8 ip[4];
+    int r, k;
+    const char *name = cmd + 9;
+
+    while (*name == ' ')
+        name++;
+
+    if (!*name) {
+        kputs("Usage: nslookup <name>\n");
+    } else if (!e1000_is_ready()) {
+        kputs("e1000 is not initialized.\n");
+    } else {
+        const u8 *srv = dns_server();
+
+        kputs("Server:  ");
+        for (k = 0; k < 4; k++) {
+            kputu(srv[k]);
+            if (k < 3) kputc('.');
+        }
+        kputs("\nName:    ");
+        kputs(name);
+        kputc('\n');
+
+        r = dns_resolve(name, ip, 2000);
+
+        if (r == DNS_OK) {
+            kputs("Address: ");
+            for (k = 0; k < 4; k++) {
+                kputu(ip[k]);
+                if (k < 3) kputc('.');
+            }
+            kputc('\n');
+        } else if (r == DNS_ERR_NXDOMAIN) {
+            kputs("Name does not exist.\n");
+        } else if (r == DNS_ERR_NOADDR) {
+            kputs("No IPv4 address for that name.\n");
+        } else if (r == DNS_ERR_NAME) {
+            kputs("Invalid name.\n");
+        } else if (r == DNS_ERR_NET) {
+            kputs("Network error (could not reach the DNS server).\n");
+        } else if (r == DNS_ERR_SERVER) {
+            kputs("DNS server error.\n");
+        } else {
+            kputs("DNS request timed out.\n");
+        }
+    }
+
+} else if (startswith(cmd, "httpget ")) {
+    char host[64];
+    char path[96];
+    const char *s = cmd + 8;    int hn = 0, pn = 0;
+    u32 total = 0;
+    int r;
+
+    while (*s == ' ')
+        s++;
+    while (*s && *s != ' ' && hn < 63)
+        host[hn++] = *s++;
+    host[hn] = 0;
+
+    while (*s == ' ')
+        s++;
+    if (*s == 0) {
+        path[0] = '/';
+        path[1] = 0;
+    } else {
+        while (*s && pn < 95)
+            path[pn++] = *s++;
+        path[pn] = 0;
+    }
+
+    if (hn == 0 || path[0] != '/') {
+        kputs("Usage: httpget <host> [/path]\n");
+    } else if (!e1000_is_ready()) {
+        kputs("e1000 is not initialized.\n");
+    } else {
+        kputs("GET http://");
+        kputs(host);
+        kputs(path);
+        kputs("\n\n");
+
+        http_shown = 0;
+        r = http_get(host, 80, path, http_sink, &total);
+
+        kputs("\n\n--- ");
+        if (r == HTTP_OK) {
+            kputu(total);
+            kputs(" bytes received");
+        } else if (r == HTTP_ERR_DNS) {
+            kputs("DNS lookup failed");
+        } else if (r == HTTP_ERR_CONNECT) {
+            kputs("could not connect (timed out)");
+        } else if (r == HTTP_ERR_REFUSED) {
+            kputs("connection refused");
+        } else if (r == HTTP_ERR_REQUEST) {
+            kputs("host or path too long");
+        } else if (r == HTTP_ERR_SEND) {
+            kputs("send failed");
+        } else if (r == HTTP_ERR_RESET) {
+            kputs("connection reset by peer");
+        } else {
+            kputs("receive timed out");
+        }
+        kputc('\n');
+    }
+
 } else if (streq(cmd, "mousetest")) {
     u32 loops = 0, any = 0, aux = 0, last = timer_ticks();
     u8 laststat = 0xFF;
@@ -692,6 +1085,9 @@ static void run(char *cmd)
             last = timer_ticks();
             kdebug("mt", "loops=%u any=%u aux=%u", loops, any, aux);
         }
+		
+		
+		
     }
     getkey();
     kputc('\n');
@@ -995,7 +1391,8 @@ static int read_line(char *buf, int maxlen)
 /* Kernel entry point */
 void kernel_main(u32 magic, u32 mbi)
 {
-	
+	payload_snapshot();
+		
     char buf[MAXLEN];
 		if (fbcon_init()) {
 		con_w = *(volatile u16 *)0x9012 / 8;    /* width from VBE mode info */
@@ -1010,8 +1407,9 @@ void kernel_main(u32 magic, u32 mbi)
 
     klog_init();
     klog_set_sink(log_sink);
+	
 
-    kinfo("kernel", "Yellowfin OS 0.0.1 (Corn Kernel) i686");
+    kinfo("kernel", "Yellowfin OS 0.3 (Corn Kernel) i686");
     mem_init(magic, mbi);
     kinfo("timer", "PIT running at 100 Hz");
     klog_probe_cpu();
@@ -1030,13 +1428,26 @@ void kernel_main(u32 magic, u32 mbi)
     klog_probe_pci();
 
     {
-        struct pci_device dev;
 
-        if (e1000_detect(&dev))
-            kok("e1000", "found at %u:%u.%u",
-                dev.bus, dev.slot, dev.function);
-        else
-            kwarn("e1000", "not found (check QEMU -nic)");
+{
+    struct pci_device dev;
+
+    if (e1000_detect(&dev)) {
+        pci_enable(dev.bus, dev.slot, dev.function, 0x02);
+
+        if (!e1000_init(&dev)) {
+            kwarn("e1000", "initialization failed", 0);
+        }
+    } else {
+        kwarn("e1000", "not found (check QEMU -nic)");
+    }
+}
+
+    if (e1000_is_ready()) {
+        static const u8 ip[4] = { 10, 0, 2, 15 };
+
+        arp_init(ip);
+        kok("arp", "initialized with IP 10.0.2.15");
     }
 
     {
@@ -1061,4 +1472,6 @@ void kernel_main(u32 magic, u32 mbi)
         color = 0x07;
         run(buf);
     }
+
+	}
 }
