@@ -15,7 +15,7 @@ KERNEL_DEST    equ 0x100000       ; where the kernel ends up (1 MiB)
 ; kernel.bin exactly:  nasm -f bin -dKERNEL_SECTORS=<n> stage2.asm
 ; This default is only used when the build does not pass it.
 %ifndef KERNEL_SECTORS
-%define KERNEL_SECTORS 144
+%define KERNEL_SECTORS 318
 %endif
 
 ; 64 sectors = 32 KB per chunk: safe on every BIOS and never crosses a 64 KB boundary.
