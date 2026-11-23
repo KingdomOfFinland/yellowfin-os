@@ -43,11 +43,10 @@ section{padding-block:47px}.section-head{margin-bottom:23px}h2{margin:0 0 5px;fo
 footer{margin-top:55px;padding:28px 15px 38px;border-top:1px solid var(--line);text-align:center;color:#abc2d5;font-size:13px}footer a{text-decoration:none}
 
 .gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
-.shot{overflow:hidden;min-height:190px;padding:0}
-.shot-preview{min-height:145px;padding:16px;background:linear-gradient(145deg,#0b2238,#174d70);border-bottom:1px solid var(--line);font:12px/1.7 Consolas,"Courier New",monospace;color:#c9eaff}
-.shot-preview .bar{margin:-16px -16px 14px;padding:8px 12px;background:#d8f3ff20;border-bottom:1px solid #d8f3ff30;font:11px "Segoe UI",sans-serif}
-.shot-preview .fishshot{font:40px/1.3 "Segoe UI Emoji",sans-serif;text-align:center}
+.shot{overflow:hidden;min-width:0;padding:0;margin:0}
+.shot img{display:block;width:100%;height:auto;max-height:440px;object-fit:contain;background:#061727;border-bottom:1px solid var(--line)}
 .shot figcaption{padding:13px 15px;color:var(--muted);font-size:13px}
+.shot figcaption b{color:var(--ink)}
 .roadmap{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
 .roadmap article{padding:20px}
 .roadmap ul{margin:12px 0 0;padding-left:19px;color:var(--muted);font-size:14px}
@@ -96,13 +95,13 @@ footer{margin-top:55px;padding:28px 15px 38px;border-top:1px solid var(--line);t
 <article class="glass tile"><div class="icon">🧪</div><h3>built to experiment</h3><p>New ideas, debugging, fixes, and features. The project grows as the system grows.</p></article>
 </div></section>
 
-<section id="gallery"><div class="section-head"><h2>a look inside</h2><p>the desktop, shell and tools — real screenshots will be added as captures are published.</p></div>
+<section id="gallery"><div class="section-head"><h2>a look inside</h2><p>real captures from the YellowfinOS repository — no mockups.</p></div>
 <div class="gallery">
-<figure class="glass shot"><div class="shot-preview"><div class="bar">YellowfinOS · desktop</div><div class="fishshot">🐟</div><div style="text-align:center;font:14px 'Segoe UI',sans-serif">YellowfinOS desktop</div><div style="margin-top:13px;padding:5px;background:#b4e8ff20">◈ start &nbsp; desktop &nbsp; terminal</div></div><figcaption><b>the desktop</b><br>illustrative preview; not a captured screenshot.</figcaption></figure>
-<figure class="glass shot"><div class="shot-preview"><div class="bar">fish@yellowfin — fsh</div><div><span class="prompt">fish@yellowfin ~ $</span> help</div><div class="dim">available commands...</div><div style="margin-top:8px"><span class="prompt">fish@yellowfin ~ $</span> _</div></div><figcaption><b>the Fish shell</b><br>illustrative preview; not a captured screenshot.</figcaption></figure>
-<figure class="glass shot"><div class="shot-preview"><div class="bar">Fish Explorer</div><div>📁 /</div><div style="padding-left:15px">📂 system</div><div style="padding-left:15px">📂 apps</div><div style="padding-left:15px">💾 data</div></div><figcaption><b>Fish Explorer</b><br>illustrative preview; not a captured screenshot.</figcaption></figure>
+<figure class="glass shot"><img src="screenie-1.PNG" alt="YellowfinOS screenshot 1" loading="lazy" decoding="async"><figcaption><b>YellowfinOS · screenshot 1</b><br>captured from the project build.</figcaption></figure>
+<figure class="glass shot"><img src="screenie-2.PNG" alt="YellowfinOS screenshot 2" loading="lazy" decoding="async"><figcaption><b>YellowfinOS · screenshot 2</b><br>captured from the project build.</figcaption></figure>
+<figure class="glass shot"><img src="screenie-3.PNG" alt="YellowfinOS screenshot 3" loading="lazy" decoding="async"><figcaption><b>YellowfinOS · screenshot 3</b><br>captured from the project build.</figcaption></figure>
 </div>
-<div class="notice glass">these are visual placeholders, not screenshots from a running build. actual captures can replace them once you add the desktop screenshots to the repository.</div></section>
+<div class="notice glass">screenshots are served directly from this repository. image dimensions are preserved so the interface stays readable.</div></section>
 <section id="roadmap"><div class="section-head"><h2>where the fish is swimming</h2><p>a living roadmap — priorities can change as development continues.</p></div>
 <div class="roadmap">
 <article class="glass"><span class="status">in 0.3</span><h3>current foundations</h3><ul><li>Corn Kernel for i686</li><li>Fish shell and new commands</li><li>graphical desktop and Fish Explorer</li><li>FTFS and ATA storage work</li><li>new e1000 and IPv4 internet drivers</li></ul></article>
