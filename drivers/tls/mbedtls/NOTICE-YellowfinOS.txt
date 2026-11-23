@@ -1,0 +1,9 @@
+This directory holds an unmodified copy of Mbed TLS 3.6.8
+(https://github.com/Mbed-TLS/mbedtls, tag v3.6.8), licensed under the
+Apache License 2.0 (see LICENSE), with ONE change:
+
+  include/mbedtls/mbedtls_config.h  - replaced by a stub that includes
+                                      drivers/tls/yf_mbedtls_config.h
+
+Only the library source files YellowfinOS builds are needed; the rest of the
+upstream tree (tests, programs, docs) is not included.
