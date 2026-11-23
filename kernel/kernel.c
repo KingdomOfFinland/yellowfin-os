@@ -21,6 +21,7 @@
 #include "dns.h"
 #include "tcp.h"
 #include "http.h"
+#include "tls/tls.h"
 
 #define VGA_W 80
 #define VGA_H 25
@@ -997,39 +998,67 @@ static void run(char *cmd)
 } else if (startswith(cmd, "httpget ")) {
     char host[64];
     char path[96];
-    const char *s = cmd + 8;    int hn = 0, pn = 0;
+    char url[160];
+    const char *s = cmd + 8;
+    int hn = 0, pn = 0, un = 0;
+    int is_url;
     u32 total = 0;
     int r;
 
-    while (*s == ' ')
-        s++;
-    while (*s && *s != ' ' && hn < 63)
-        host[hn++] = *s++;
-    host[hn] = 0;
+    host[0] = 0;
+    path[0] = 0;
+    url[0] = 0;
 
     while (*s == ' ')
         s++;
-    if (*s == 0) {
-        path[0] = '/';
-        path[1] = 0;
+
+    is_url = startswith(s, "http://") || startswith(s, "https://");
+
+    if (is_url) {
+        /* httpget https://example.com/page */
+        while (*s && *s != ' ' && un < 159)
+            url[un++] = *s++;
+        url[un] = 0;
     } else {
-        while (*s && pn < 95)
-            path[pn++] = *s++;
-        path[pn] = 0;
+        /* httpget example.com /page   (plain HTTP, as before) */
+        while (*s && *s != ' ' && hn < 63)
+            host[hn++] = *s++;
+        host[hn] = 0;
+
+        while (*s == ' ')
+            s++;
+        if (*s == 0) {
+            path[0] = '/';
+            path[1] = 0;
+        } else {
+            while (*s && pn < 95)
+                path[pn++] = *s++;
+            path[pn] = 0;
+        }
     }
 
-    if (hn == 0 || path[0] != '/') {
+    if (is_url ? (un == 0) : (hn == 0 || path[0] != '/')) {
         kputs("Usage: httpget <host> [/path]\n");
+        kputs("       httpget http://host[:port]/path\n");
+        kputs("       httpget https://host[:port]/path\n");
     } else if (!e1000_is_ready()) {
         kputs("e1000 is not initialized.\n");
     } else {
-        kputs("GET http://");
-        kputs(host);
-        kputs(path);
+        kputs("GET ");
+        if (is_url) {
+            kputs(url);
+        } else {
+            kputs("http://");
+            kputs(host);
+            kputs(path);
+        }
         kputs("\n\n");
 
         http_shown = 0;
-        r = http_get(host, 80, path, http_sink, &total);
+        if (is_url)
+            r = http_get_url(url, http_sink, &total);
+        else
+            r = http_get(host, 80, path, http_sink, &total);
 
         kputs("\n\n--- ");
         if (r == HTTP_OK) {
@@ -1047,12 +1076,15 @@ static void run(char *cmd)
             kputs("send failed");
         } else if (r == HTTP_ERR_RESET) {
             kputs("connection reset by peer");
+        } else if (r == HTTP_ERR_TLS) {
+            kputs("TLS failed: ");
+            kputs(tls_last_error());
         } else {
             kputs("receive timed out");
         }
         kputc('\n');
     }
-
+	
 } else if (streq(cmd, "mousetest")) {
     u32 loops = 0, any = 0, aux = 0, last = timer_ticks();
     u8 laststat = 0xFF;
